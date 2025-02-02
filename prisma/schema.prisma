@@ -14,13 +14,14 @@ datasource db {
 }
 
 model Operation {
-  id        String          @id @default(uuid())
-  name      String      
-  category  String
-  value     Int
-  type      OperationType   @default(EXPENSE)
-  createAt  DateTime        @default(now())
-  updateAt  DateTime        @updatedAt()
+  id              String          @id @default(uuid())
+  name            String      
+  category        String
+  value           Int
+  type            OperationType   @default(EXPENSE)
+  createAt        DateTime        @default(now())
+  updateAt        DateTime        @updatedAt()
+  operationDate   DateTime
 }
 
 enum OperationType {

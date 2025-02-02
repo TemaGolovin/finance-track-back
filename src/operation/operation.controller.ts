@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, UsePipes } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, UsePipes } from '@nestjs/common';
 import { OperationService } from './operation.service';
 import { CreateOperationDto } from './dto';
 
@@ -19,5 +19,10 @@ export class OperationController {
   @Put('/:id')
   updateOperation(@Body() dto: CreateOperationDto, @Param('id') id: string) {
     return this.operationService.updateOperation(id, dto);
+  }
+
+  @Delete('/:id')
+  deleteOperation(@Param('id') id: string) {
+    return this.operationService.deleteOperation(id);
   }
 }

@@ -1,4 +1,4 @@
-import { IsNumber, IsString, } from "class-validator";
+import { IsDateString, IsEnum, IsNumber, IsString, } from "class-validator";
 
 export class CreateOperationDto {
   @IsString()
@@ -9,4 +9,10 @@ export class CreateOperationDto {
 
   @IsNumber()
   value: number;
+  
+  @IsEnum(['INCOME', 'EXPENSE'], { message: 'type must be INCOME or EXPENSE' })
+  type: "INCOME" | "EXPENSE";
+
+  @IsDateString()
+  operationDate: string;
 }
