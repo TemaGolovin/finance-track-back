@@ -24,6 +24,13 @@ model Operation {
   operationDate   DateTime
 }
 
+model Category {
+  id              String          @id @default(uuid())
+  name            String          @unique()
+  createAt        DateTime        @default(now())
+  updateAt        DateTime        @updatedAt()
+}
+
 enum OperationType {
   EXPENSE
   INCOME

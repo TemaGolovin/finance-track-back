@@ -17,18 +17,9 @@ export class OperationService {
       data: createOperationDto,
     });
 
-    if (!operation) {
-      return {
-        success: false,
-        data: {
-          message: 'Operation not created',
-        },
-      };
-    }
-
     return {
       success: true,
-      data: createOperationDto,
+      data: operation,
     };
   }
 
@@ -55,16 +46,6 @@ export class OperationService {
     const operation = await this.prisma.operation.delete({
     where: { id },
     });
-
-
-    if (!operation) {
-      return {
-        success: false,
-        data: {
-          message: 'Operation not found',
-        },
-      };
-    }
 
     return {
       success: true,
