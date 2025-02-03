@@ -36,6 +36,45 @@ export class CategoryService {
     };
   }
 
+    async updateCategory(id: string, categoryDto: CreateCategoryDto) {
+      await this.validateCategoryExists(id);
+
+      const categoryExists = await this.prisma.category.findUnique({
+        where: { name: categoryDto.name, NOT: { id } },
+      });
+
+      if (categoryExists) {
+        throw new ConflictException(ERRORS_MESSAGES.ALREADY_EXISTS({
+          entity: 'Category',
+          fieldName: 'name',
+          fieldValue: categoryDto.name,
+        }));
+      }
+
+      const category = await this.prisma.category.update({
+        where: { id },
+        data: categoryDto,
+      });
+    
+      return {
+        success: true,
+        data: category,
+      };
+    }
+
+    async deleteCategory(id: string) {
+      await this.validateCategoryExists(id);
+
+      const category = await this.prisma.category.delete({
+        where: { id },
+      });
+    
+      return {
+        success: true,
+        data: category,
+      };
+    }
+
     async validateCategoryExists(id: string): Promise<void> {
       const operation = await this.prisma.category.findUnique({
         where: { id },
