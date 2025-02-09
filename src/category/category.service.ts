@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateCategoryDto } from './dto/create-category.dto';
+import type { PrismaService } from 'src/prisma/prisma.service';
+import type { CreateCategoryDto } from './dto/create-category.dto';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
 
 @Injectable()

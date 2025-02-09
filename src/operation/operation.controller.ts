@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, UsePipes } from '@nestjs/common';
-import { OperationService } from './operation.service';
-import { CreateOperationDto } from './dto';
+import type { OperationService } from './operation.service';
+import type { CreateOperationDto } from './dto';
 
 @Controller('operation')
 export class OperationController {
