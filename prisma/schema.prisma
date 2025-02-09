@@ -5,7 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
 }
 
 datasource db {
@@ -16,7 +16,8 @@ datasource db {
 model Operation {
   id              String          @id @default(uuid())
   name            String      
-  category        String
+  category        Category        @relation(fields: [categoryId], references: [id])
+  categoryId      String
   value           Int
   type            OperationType   @default(EXPENSE)
   createAt        DateTime        @default(now())
@@ -29,6 +30,7 @@ model Category {
   name            String          @unique()
   createAt        DateTime        @default(now())
   updateAt        DateTime        @updatedAt()
+  operations      Operation[]
 }
 
 enum OperationType {

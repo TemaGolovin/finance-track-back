@@ -1,11 +1,11 @@
-import { IsDateString, IsEnum, IsNumber, IsString, } from "class-validator";
+import { IsDateString, IsEnum, IsNumber, IsString, IsUUID, } from "class-validator";
 
 export class CreateOperationDto {
   @IsString()
   name: string;
 
-  @IsString()
-  category: string;
+  @IsUUID()
+  categoryId: string;
 
   @IsNumber()
   value: number;

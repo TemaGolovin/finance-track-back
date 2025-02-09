@@ -15,7 +15,7 @@ export class CategoryService {
 
   async createCategory(categoryDto: CreateCategoryDto) {
     const categoryExists = await this.prisma.category.findUnique({
-      where: { name: categoryDto.name },
+      where: { name: categoryDto.name.toLowerCase() },
     });
 
     if (categoryExists) {
@@ -27,7 +27,7 @@ export class CategoryService {
     }
 
     const category = await this.prisma.category.create({
-      data: categoryDto,
+      data: {...categoryDto, name: categoryDto.name.toLowerCase()},
     });
 
     return {
@@ -40,7 +40,7 @@ export class CategoryService {
       await this.validateCategoryExists(id);
 
       const categoryExists = await this.prisma.category.findUnique({
-        where: { name: categoryDto.name, NOT: { id } },
+        where: { name: categoryDto.name.toLowerCase(), NOT: { id } },
       });
 
       if (categoryExists) {
@@ -53,7 +53,7 @@ export class CategoryService {
 
       const category = await this.prisma.category.update({
         where: { id },
-        data: categoryDto,
+        data: categoryDto.name.toLowerCase(),
       });
     
       return {
