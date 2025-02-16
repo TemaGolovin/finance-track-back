@@ -13,6 +13,16 @@ export class OperationService {
   }
 
   async createOperation(createOperationDto: CreateOperationDto) {
+    const category = await this.prisma.category.findUnique({
+      where: { id: createOperationDto.categoryId },
+    });
+
+    if (!category) {
+      throw new NotFoundException(
+        ERRORS_MESSAGES.NOT_FOUND('Category', createOperationDto.categoryId),
+      );
+    }
+
     const operation = await this.prisma.operation.create({
       data: createOperationDto,
     });
@@ -24,11 +34,9 @@ export class OperationService {
   }
 
   async updateOperation(id: string, createOperationDto: CreateOperationDto) {
-
     await this.validateOperationExists(id);
 
-    const operation = await 
-    this.prisma.operation.update({
+    const operation = await this.prisma.operation.update({
       where: { id },
       data: createOperationDto,
     });
@@ -36,15 +44,14 @@ export class OperationService {
     return {
       success: true,
       data: operation,
-    }
+    };
   }
 
   async deleteOperation(id: string) {
-
     await this.validateOperationExists(id);
 
     const operation = await this.prisma.operation.delete({
-    where: { id },
+      where: { id },
     });
 
     return {
@@ -57,10 +64,9 @@ export class OperationService {
     const operation = await this.prisma.operation.findUnique({
       where: { id },
     });
-  
+
     if (!operation) {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Operation', id));
     }
   }
-  
 }

@@ -7,15 +7,17 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const config = new DocumentBuilder()
-  .setTitle('Cats example')
-  .setDescription('The cats API description')
-  .setVersion('1.0')
-  .addTag('cats')
-  .build();
+    .setTitle('finance tracker API docs')
+    .setDescription(
+      'A joint finance tracker that allows you to combine the expenses and income of the entire family',
+    )
+    .setVersion('1.0')
+    .addTag('finance-tracker')
+    .build();
 
   SwaggerModule.setup('api', app, SwaggerModule.createDocument(app, config));
 
-  app.useGlobalPipes(new ValidationPipe())
+  app.useGlobalPipes(new ValidationPipe());
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
