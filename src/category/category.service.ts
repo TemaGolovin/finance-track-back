@@ -7,15 +7,21 @@ import { UpdateCategoryDto, CreateCategoryDto } from './dto';
 export class CategoryService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getCategories() {
-    const categories = await this.prisma.category.findMany();
+  async getCategories(userId: string) {
+    console.log(userId);
+
+    const categories = await this.prisma.category.findMany({
+      where: {
+        userId: userId,
+      },
+    });
 
     return categories;
   }
 
-  async createCategory(categoryDto: CreateCategoryDto) {
+  async createCategory(categoryDto: CreateCategoryDto, userId: string) {
     const categoryExists = await this.prisma.category.findUnique({
-      where: { name: categoryDto.name.toLowerCase() },
+      where: { name: categoryDto.name.toLowerCase(), userId },
     });
 
     if (categoryExists) {
@@ -29,7 +35,7 @@ export class CategoryService {
     }
 
     const category = await this.prisma.category.create({
-      data: { ...categoryDto, name: categoryDto.name.toLowerCase() },
+      data: { ...categoryDto, name: categoryDto.name.toLowerCase(), userId },
     });
 
     return {
@@ -38,11 +44,11 @@ export class CategoryService {
     };
   }
 
-  async updateCategory(id: string, categoryDto: UpdateCategoryDto) {
+  async updateCategory(id: string, categoryDto: UpdateCategoryDto, userId: string) {
     await this.validateCategoryExists(id);
 
     const categoryExists = await this.prisma.category.findUnique({
-      where: { name: categoryDto.name.toLowerCase(), NOT: { id } },
+      where: { name: categoryDto.name.toLowerCase(), NOT: { id }, userId },
     });
 
     if (categoryExists) {
@@ -59,6 +65,7 @@ export class CategoryService {
       where: { id },
       data: {
         name: categoryDto.name.toLowerCase(),
+        userId: userId,
       },
     });
 
@@ -68,11 +75,11 @@ export class CategoryService {
     };
   }
 
-  async deleteCategory(id: string) {
-    await this.validateCategoryExists(id);
+  async deleteCategory(id: string, userId: string) {
+    await this.validateCategoryExists(id, userId);
 
     const category = await this.prisma.category.delete({
-      where: { id },
+      where: { id, userId },
     });
 
     return {
@@ -81,9 +88,9 @@ export class CategoryService {
     };
   }
 
-  async validateCategoryExists(id: string): Promise<void> {
+  async validateCategoryExists(id: string, userId?: string): Promise<void> {
     const operation = await this.prisma.category.findUnique({
-      where: { id },
+      where: { id, userId },
     });
 
     if (!operation) {

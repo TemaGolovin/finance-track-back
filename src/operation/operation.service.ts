@@ -6,15 +6,17 @@ import { ERRORS_MESSAGES } from 'src/constants/errors';
 @Injectable()
 export class OperationService {
   constructor(private readonly prisma: PrismaService) {}
-  getOperation() {
-    const operations = this.prisma.operation.findMany();
+  getOperation(userId: string) {
+    const operations = this.prisma.operation.findMany({
+      where: { userId },
+    });
 
     return operations;
   }
 
-  async createOperation(createOperationDto: CreateOperationDto) {
+  async createOperation(createOperationDto: CreateOperationDto, userId: string) {
     const category = await this.prisma.category.findUnique({
-      where: { id: createOperationDto.categoryId },
+      where: { id: createOperationDto.categoryId, userId },
     });
 
     if (!category) {
@@ -24,7 +26,7 @@ export class OperationService {
     }
 
     const operation = await this.prisma.operation.create({
-      data: createOperationDto,
+      data: { ...createOperationDto, userId },
     });
 
     return {
@@ -33,11 +35,11 @@ export class OperationService {
     };
   }
 
-  async updateOperation(id: string, createOperationDto: CreateOperationDto) {
+  async updateOperation(id: string, createOperationDto: CreateOperationDto, userId: string) {
     await this.validateOperationExists(id);
 
     const operation = await this.prisma.operation.update({
-      where: { id },
+      where: { id, userId },
       data: createOperationDto,
     });
 
@@ -47,11 +49,11 @@ export class OperationService {
     };
   }
 
-  async deleteOperation(id: string) {
-    await this.validateOperationExists(id);
+  async deleteOperation(id: string, userId: string) {
+    await this.validateOperationExists(id, userId);
 
     const operation = await this.prisma.operation.delete({
-      where: { id },
+      where: { id, userId },
     });
 
     return {
@@ -60,9 +62,9 @@ export class OperationService {
     };
   }
 
-  async validateOperationExists(id: string): Promise<void> {
+  async validateOperationExists(id: string, userId?: string): Promise<void> {
     const operation = await this.prisma.operation.findUnique({
-      where: { id },
+      where: { id, userId },
     });
 
     if (!operation) {

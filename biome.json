@@ -24,6 +24,9 @@
       "recommended": true,
       "style": {
         "useImportType": "off"
+      },
+      "correctness": {
+        "noUnusedVariables": "warn"
       }
     }
   },

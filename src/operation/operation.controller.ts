@@ -9,6 +9,7 @@ import {
 } from './entity/operation.entity';
 import { ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
 import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
+import { UserInfo } from 'src/decorators/user-auth-info.decorator';
 
 @Controller('operation')
 export class OperationController {
@@ -16,28 +17,38 @@ export class OperationController {
 
   @Get()
   @ApiOkResponse({ type: [OperationEntity] })
-  getOperations() {
-    return this.operationService.getOperation();
+  getOperations(@UserInfo() userInfo: { email: string; name: string; id: string }) {
+    return this.operationService.getOperation(userInfo.id);
   }
 
   @Post()
   @ApiWrapperCreatedResponse(CreateOperationEntity)
   @ApiNotFoundResponse({ type: TemplateErrorResponse })
-  createOperation(@Body() dto: CreateOperationDto) {
-    return this.operationService.createOperation(dto);
+  createOperation(
+    @Body() dto: CreateOperationDto,
+    @UserInfo() userInfo: { email: string; name: string; id: string },
+  ) {
+    return this.operationService.createOperation(dto, userInfo.id);
   }
 
   @Put('/:id')
   @ApiWrapperOkResponse(UpdateOperationEntity)
   @ApiNotFoundResponse({ type: TemplateErrorResponse })
-  updateOperation(@Body() dto: CreateOperationDto, @Param('id') id: string) {
-    return this.operationService.updateOperation(id, dto);
+  updateOperation(
+    @Body() dto: CreateOperationDto,
+    @Param('id') id: string,
+    @UserInfo() userInfo: { email: string; name: string; id: string },
+  ) {
+    return this.operationService.updateOperation(id, dto, userInfo.id);
   }
 
   @Delete('/:id')
   @ApiWrapperOkResponse(UpdateOperationEntity)
   @ApiNotFoundResponse({ type: TemplateErrorResponse })
-  deleteOperation(@Param('id') id: string) {
-    return this.operationService.deleteOperation(id);
+  deleteOperation(
+    @Param('id') id: string,
+    @UserInfo() userInfo: { email: string; name: string; id: string },
+  ) {
+    return this.operationService.deleteOperation(id, userInfo.id);
   }
 }
