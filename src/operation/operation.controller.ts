@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, UsePipes } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { OperationService } from './operation.service';
 import { CreateOperationDto } from './dto';
 import { ApiWrapperCreatedResponse, ApiWrapperOkResponse } from 'src/decorators/ApiWrapperResponse';

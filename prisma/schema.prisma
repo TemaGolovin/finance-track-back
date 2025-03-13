@@ -22,17 +22,26 @@ model User {
   updateAt                DateTime                @updatedAt()
   operations              Operation[]
   categories              Category[]
-  userRelationGroup       UserRelationGroup?       @relation(fields: [userRelationGroupId], references: [id])
-  userRelationGroupId     String?              
+  userRelationGroups      UserRelationGroupUser[]           
 }
 
 model UserRelationGroup {
   id              String          @id @default(uuid())
-  name            String          @unique()
+  name            String
   createAt        DateTime        @default(now())
   updateAt        DateTime        @updatedAt()
-  users           User[]
+  users           UserRelationGroupUser[]
 }
+
+model UserRelationGroupUser {
+  id                  String            @id @default(uuid())
+  user                User              @relation(fields: [userId], references: [id])
+  userId              String          
+  userRelationGroup   UserRelationGroup @relation(fields: [userRelationGroupId], references: [id])
+  userRelationGroupId String
+}
+
+
 
 model Operation {
   id              String          @id @default(uuid())
@@ -50,12 +59,14 @@ model Operation {
 
 model Category {
   id              String          @id @default(uuid())
-  name            String          @unique()
+  name            String          
   createAt        DateTime        @default(now())
   updateAt        DateTime        @updatedAt()
   operations      Operation[]
   user            User?            @relation(fields: [userId], references: [id])
   userId          String?
+
+  @@unique([name, userId])
 }
 
 enum OperationType {
