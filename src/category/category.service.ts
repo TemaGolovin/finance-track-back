@@ -20,7 +20,7 @@ export class CategoryService {
   }
 
   async createCategory(categoryDto: CreateCategoryDto, userId: string) {
-    const categoryExists = await this.prisma.category.findUnique({
+    const categoryExists = await this.prisma.category.findFirst({
       where: { name: categoryDto.name.toLowerCase(), userId },
     });
 
@@ -47,7 +47,7 @@ export class CategoryService {
   async updateCategory(id: string, categoryDto: UpdateCategoryDto, userId: string) {
     await this.validateCategoryExists(id);
 
-    const categoryExists = await this.prisma.category.findUnique({
+    const categoryExists = await this.prisma.category.findFirst({
       where: { name: categoryDto.name.toLowerCase(), NOT: { id }, userId },
     });
 

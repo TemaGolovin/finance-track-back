@@ -66,6 +66,8 @@ export class AuthService {
     };
   }
 
+  async refresh(refreshToken: string) {}
+
   private async validateUser(email: string, password: string) {
     const user = await this.findUserByEmail(email);
 

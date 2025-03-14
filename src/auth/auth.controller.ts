@@ -7,7 +7,7 @@ import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
 import { ApiConflictResponse } from '@nestjs/swagger';
 import { LoginEntity } from './entity/login.entity';
 import { Response } from 'express';
-import { Public } from 'src/decorators/pablic.decorator';
+import { Public } from 'src/decorators/public.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -53,6 +53,21 @@ export class AuthController {
     return response.status(200).json({
       success: true,
       data: dataWithoutRefresh,
+    });
+  }
+
+  @Post('refresh')
+  async refresh(@Res() response: Response) {
+    const refreshToken = response.req.cookies.refreshToken;
+    // const { data } = await this.authService.refresh();
+  }
+
+  @Post('logout')
+  async logout(@Res() response: Response) {
+    response.clearCookie('refreshToken');
+    return response.status(200).json({
+      success: true,
+      data: null,
     });
   }
 }

@@ -58,5 +58,5 @@ export class RegistrationEntity {
     required: false,
     type: String,
   })
-  userRelationGroupId: string;
+  userRelationGroupId?: string;
 }
