@@ -40,6 +40,15 @@ export class RegistrationDto {
     type: String,
   })
   groupId: string;
+
+  @IsUUID()
+  @ApiProperty({
+    description: 'generated and saved device id for user',
+    example: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+    required: true,
+    type: String,
+  })
+  deviceId: string;
 }
 
 export class LoginDto {
@@ -61,4 +70,13 @@ export class LoginDto {
     type: String,
   })
   password: string;
+
+  @IsUUID()
+  @ApiProperty({
+    description: 'generated and saved device id for user',
+    example: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+    required: true,
+    type: String,
+  })
+  deviceId: string;
 }

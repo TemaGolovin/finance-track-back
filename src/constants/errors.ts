@@ -12,4 +12,6 @@ export const ERRORS_MESSAGES = {
   }) => `${entity} with field "${fieldName}: ${fieldValue}" already exists`,
 
   WRONG_LOGIN_OR_PASSWORD: () => 'Wrong login or password',
+
+  FORBIDDEN: () => 'Forbidden',
 };

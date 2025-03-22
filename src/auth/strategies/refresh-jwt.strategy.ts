@@ -9,7 +9,12 @@ export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'jwt-refres
   constructor() {
     super({
       jwtFromRequest: (req: Request) => {
-        const refreshToken = req.cookies?.refreshToken;
+        const cookies = req.headers.cookie.split('=');
+
+        const refreshToken = cookies.find((_name, i, self) => {
+          return self[i - 1] === 'refreshToken';
+        });
+
         if (!refreshToken) throw new UnauthorizedException('Cookie not found');
         return refreshToken;
       },
@@ -19,6 +24,11 @@ export class RefreshTokenStrategy extends PassportStrategy(Strategy, 'jwt-refres
   }
 
   validate(req: Request, payload) {
-    return { ...payload, refreshToken: req.cookies.refreshToken };
+    const cookies = req.headers.cookie.split('=');
+
+    const refreshToken = cookies.find((_name, i, self) => {
+      return self[i - 1] === 'refreshToken';
+    });
+    return { ...payload, refreshToken };
   }
 }

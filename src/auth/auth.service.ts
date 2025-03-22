@@ -21,23 +21,38 @@ export class AuthService {
 
   async registration(
     registrationDto: RegistrationDto,
+    userAgent: string,
   ): Promise<ResponseWrapper<RegistrationEntity & { refreshToken: string }>> {
     await this.checkUserExistsByEmail(registrationDto.email);
     await this.checkUserExistsByName(registrationDto.name);
+
+    const { deviceId, groupId, ...registrationDtoWithoutDevice } = registrationDto;
 
     const salt = await genSalt(10);
     const hashPassword = await hash(registrationDto.password, salt);
 
     const newUser = await this.prisma.user.create({
       data: {
-        ...registrationDto,
+        ...registrationDtoWithoutDevice,
         password: hashPassword,
       },
     });
 
     const { password, ...userData } = newUser;
 
-    const tokens = await this.createTokens(userData.id, userData.email, userData.name);
+    const tokens = await this.createTokens({
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      deviceId: deviceId,
+    });
+
+    await this.saveRefreshToken({
+      refreshToken: tokens.refreshToken,
+      userId: userData.id,
+      deviceId,
+      userAgent,
+    });
 
     return {
       success: true,
@@ -49,10 +64,22 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto, userAgent: string) {
     const user = await this.validateUser(loginDto.email, loginDto.password);
 
-    const tokens = await this.createTokens(user.id, user.email, user.name);
+    const tokens = await this.createTokens({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      deviceId: loginDto.deviceId,
+    });
+
+    await this.saveRefreshToken({
+      refreshToken: tokens.refreshToken,
+      userId: user.id,
+      deviceId: loginDto.deviceId,
+      userAgent,
+    });
 
     return {
       success: true,
@@ -66,7 +93,49 @@ export class AuthService {
     };
   }
 
-  async refresh(refreshToken: string) {}
+  async refresh(
+    user: { email: string; name: string; id: string; deviceId: string },
+    userAgent: string,
+  ) {
+    const { user: payload, refreshTokenInfo } = await this.findRefreshToken(user);
+
+    await this.prisma.refreshToken.delete({
+      where: {
+        id: refreshTokenInfo.id,
+      },
+    });
+
+    const tokens = await this.createTokens({
+      id: refreshTokenInfo.userId,
+      email: payload.email,
+      name: payload.name,
+      deviceId: refreshTokenInfo.deviceId,
+    });
+
+    await this.saveRefreshToken({
+      refreshToken: tokens.refreshToken,
+      userId: payload.id,
+      deviceId: refreshTokenInfo.deviceId,
+      userAgent,
+    });
+
+    return {
+      success: true,
+      data: {
+        token: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      },
+    };
+  }
+
+  async logout(user: { email: string; name: string; id: string; deviceId: string }) {
+    await this.prisma.refreshToken.deleteMany({
+      where: {
+        userId: user.id,
+        deviceId: user.deviceId,
+      },
+    });
+  }
 
   private async validateUser(email: string, password: string) {
     const user = await this.findUserByEmail(email);
@@ -127,13 +196,78 @@ export class AuthService {
     }
   }
 
-  private async createTokens(id: string, email: string, name: string) {
-    const accessToken = await this.jwtService.signAsync({ id, email, name }, { expiresIn: '15m' });
-    const refreshToken = await this.jwtService.signAsync({ id, email, name }, { expiresIn: '7d' });
+  private async createTokens({
+    id,
+    email,
+    name,
+    deviceId,
+  }: { id: string; email: string; name: string; deviceId: string }) {
+    const accessToken = await this.jwtService.signAsync(
+      { id, deviceId, email, name },
+      { expiresIn: '15m', secret: process.env.JWT_SECRET_CODE },
+    );
+    const refreshToken = await this.jwtService.signAsync(
+      { id, deviceId, name, email },
+      { expiresIn: '7d', secret: process.env.JWT_REFRESH_SECRET },
+    );
 
     return {
       accessToken,
       refreshToken,
+    };
+  }
+
+  private async saveRefreshToken({
+    refreshToken,
+    userId,
+    deviceId,
+    userAgent,
+  }: {
+    refreshToken: string;
+    userId: string;
+    deviceId: string;
+    userAgent: string;
+  }) {
+    const hashedRefreshToken = await hash(refreshToken, 10);
+    await this.prisma.refreshToken.create({
+      data: {
+        deviceId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        token: hashedRefreshToken,
+        userAgent,
+        userId,
+      },
+    });
+  }
+
+  private async findRefreshToken(user: {
+    email: string;
+    name: string;
+    id: string;
+    deviceId: string;
+  }) {
+    if (!user) {
+      throw new UnauthorizedException(ERRORS_MESSAGES.FORBIDDEN());
+    }
+
+    const refreshTokenInfo = await this.prisma.refreshToken.findUnique({
+      where: {
+        userId_deviceId: {
+          userId: user.id,
+          deviceId: user.deviceId,
+        },
+      },
+    });
+
+    console.log(user);
+
+    if (!refreshTokenInfo) {
+      throw new UnauthorizedException(ERRORS_MESSAGES.FORBIDDEN());
+    }
+
+    return {
+      user,
+      refreshTokenInfo,
     };
   }
 }
