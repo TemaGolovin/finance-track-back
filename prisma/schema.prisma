@@ -24,6 +24,8 @@ model User {
   categories              Category[]
   userRelationGroups      UserRelationGroupUser[]
   refreshTokens           RefreshToken[]         
+  sentInvitations         Invitation[]            @relation("SentInvitations")
+  receivedInvitations     Invitation[]            @relation("ReceivedInvitations")
 }
 
 model UserRelationGroup {
@@ -32,6 +34,7 @@ model UserRelationGroup {
   createAt        DateTime        @default(now())
   updateAt        DateTime        @updatedAt()
   users           UserRelationGroupUser[]
+  invitations     Invitation[]
 }
 
 model UserRelationGroupUser {
@@ -88,4 +91,27 @@ model RefreshToken {
 
   @@index([userId, deviceId])
   @@unique([userId, deviceId])
+}
+
+model Invitation {
+  id           String           @id @default(uuid())
+  sender       User             @relation(name: "SentInvitations", fields: [senderId], references: [id])
+  senderId     String
+  recipient    User             @relation(name: "ReceivedInvitations", fields: [recipientId], references: [id])
+  recipientId  String
+  group        UserRelationGroup @relation(fields: [groupId], references: [id])
+  groupId      String
+  status       InvitationStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt()
+
+  @@unique([recipientId, groupId], name: "active_invitation")
+  @@index([recipientId, status])
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
 }
