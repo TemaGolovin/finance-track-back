@@ -26,6 +26,7 @@ model User {
   refreshTokens           RefreshToken[]         
   sentInvitations         Invitation[]            @relation("SentInvitations")
   receivedInvitations     Invitation[]            @relation("ReceivedInvitations")
+  groupCreator            UserRelationGroup[]
 }
 
 model UserRelationGroup {
@@ -35,6 +36,8 @@ model UserRelationGroup {
   updateAt        DateTime        @updatedAt()
   users           UserRelationGroupUser[]
   invitations     Invitation[]
+  creator         User            @relation(fields: [creatorId], references: [id])
+  creatorId       String
 }
 
 model UserRelationGroupUser {

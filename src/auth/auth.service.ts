@@ -247,7 +247,7 @@ export class AuthService {
     deviceId: string;
   }) {
     if (!user) {
-      throw new UnauthorizedException(ERRORS_MESSAGES.FORBIDDEN());
+      throw new UnauthorizedException(ERRORS_MESSAGES.UNAUTHORIZED());
     }
 
     const refreshTokenInfo = await this.prisma.refreshToken.findUnique({
@@ -258,11 +258,8 @@ export class AuthService {
         },
       },
     });
-
-    console.log(user);
-
     if (!refreshTokenInfo) {
-      throw new UnauthorizedException(ERRORS_MESSAGES.FORBIDDEN());
+      throw new UnauthorizedException(ERRORS_MESSAGES.UNAUTHORIZED());
     }
 
     return {

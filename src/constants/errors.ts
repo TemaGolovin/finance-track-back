@@ -13,5 +13,6 @@ export const ERRORS_MESSAGES = {
 
   WRONG_LOGIN_OR_PASSWORD: () => 'Wrong login or password',
 
-  FORBIDDEN: () => 'Forbidden',
+  FORBIDDEN: () => "You don't have access to this resource",
+  UNAUTHORIZED: () => 'Unauthorized',
 };

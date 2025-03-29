@@ -8,8 +8,6 @@ export class CategoryService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getCategories(userId: string) {
-    console.log(userId);
-
     const categories = await this.prisma.category.findMany({
       where: {
         userId: userId,

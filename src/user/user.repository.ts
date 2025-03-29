@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { InvitationStatus } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
@@ -46,7 +47,7 @@ export class UserRepository {
         groupId,
         recipientId,
         senderId,
-        status: 'PENDING',
+        status: InvitationStatus.PENDING,
       },
     });
   }
@@ -81,6 +82,14 @@ export class UserRepository {
     });
   }
 
+  getInventionById(invitationId: string) {
+    return this.prisma.invitation.findUnique({
+      where: {
+        id: invitationId,
+      },
+    });
+  }
+
   findUsersByIds(ids: string[]) {
     return this.prisma.user.findMany({
       where: {
@@ -90,6 +99,17 @@ export class UserRepository {
       },
       select: {
         name: true,
+      },
+    });
+  }
+
+  updateInvitation({ status }: { status: InvitationStatus }, invitationId: string) {
+    return this.prisma.invitation.update({
+      where: {
+        id: invitationId,
+      },
+      data: {
+        status,
       },
     });
   }
