@@ -11,12 +11,14 @@ import { compare, genSalt, hash } from 'bcryptjs';
 import { RegistrationEntity } from './entity/registration.entity';
 import { ResponseWrapper } from 'src/constants/response-wrapper';
 import { JwtService } from '@nestjs/jwt';
+import { AuthRepository } from './auth.repository';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly authRepository: AuthRepository,
   ) {}
 
   async registration(
@@ -67,6 +69,17 @@ export class AuthService {
   async login(loginDto: LoginDto, userAgent: string) {
     const user = await this.validateUser(loginDto.email, loginDto.password);
 
+    const { refreshTokenInfo } = await this.findRefreshToken({
+      deviceId: loginDto.deviceId,
+      email: user.email,
+      name: user.name,
+      id: user.id,
+    });
+
+    if (refreshTokenInfo.deviceId === loginDto.deviceId) {
+      await this.authRepository.deleteRefreshTokenByUserIdDeviceId(user.id, loginDto.deviceId);
+    }
+
     const tokens = await this.createTokens({
       id: user.id,
       email: user.email,
@@ -99,11 +112,11 @@ export class AuthService {
   ) {
     const { user: payload, refreshTokenInfo } = await this.findRefreshToken(user);
 
-    await this.prisma.refreshToken.delete({
-      where: {
-        id: refreshTokenInfo.id,
-      },
-    });
+    if (!refreshTokenInfo) {
+      throw new UnauthorizedException(ERRORS_MESSAGES.UNAUTHORIZED());
+    }
+
+    await this.authRepository.deleteRefreshTokenById(refreshTokenInfo.id);
 
     const tokens = await this.createTokens({
       id: refreshTokenInfo.userId,
@@ -229,14 +242,11 @@ export class AuthService {
     userAgent: string;
   }) {
     const hashedRefreshToken = await hash(refreshToken, 10);
-    await this.prisma.refreshToken.create({
-      data: {
-        deviceId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        token: hashedRefreshToken,
-        userAgent,
-        userId,
-      },
+    await this.authRepository.createRefreshToken({
+      userId,
+      deviceId,
+      userAgent,
+      hashedRefreshToken,
     });
   }
 
@@ -250,17 +260,10 @@ export class AuthService {
       throw new UnauthorizedException(ERRORS_MESSAGES.UNAUTHORIZED());
     }
 
-    const refreshTokenInfo = await this.prisma.refreshToken.findUnique({
-      where: {
-        userId_deviceId: {
-          userId: user.id,
-          deviceId: user.deviceId,
-        },
-      },
+    const refreshTokenInfo = await this.authRepository.findRefreshToken({
+      deviceId: user.deviceId,
+      userId: user.id,
     });
-    if (!refreshTokenInfo) {
-      throw new UnauthorizedException(ERRORS_MESSAGES.UNAUTHORIZED());
-    }
 
     return {
       user,

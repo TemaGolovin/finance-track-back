@@ -4,20 +4,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { UserRepository } from './user.repository';
 import { InviteToGroupByNameDto } from './dto/invite-to-group-by-name.dto';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
 import { UpdateInvitationDto } from './dto/update-invitation.dto';
 import { InvitationStatus } from '@prisma/client';
 import { USER_ERRORS } from './common/errors';
-import { UserGroupRepository } from 'src/user-group/user-group.repository';
+import { UserGroupService } from 'src/user-group/user-group.service';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly userGroupRepository: UserGroupRepository,
+    private readonly userGroupService: UserGroupService,
   ) {}
   async findUsersByUsername(username: string) {
     return await this.userRepository.findUsersByUsername(username);
@@ -35,7 +34,11 @@ export class UserService {
       throw new ConflictException(USER_ERRORS.SELF_INVITATION);
     }
 
-    const targetUserGroup = await this.userGroupRepository.getUserGroupById(groupId);
+    const targetUserGroup = await this.userGroupService.getUserGroupById(groupId);
+
+    if (!targetUserGroup) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('group', groupId, 'id'));
+    }
 
     if (targetUserGroup.creatorId === user.id) {
       throw new ForbiddenException(USER_ERRORS.FORBIDDEN_INVITATION_THIS_GROUP);
@@ -103,6 +106,10 @@ export class UserService {
 
     if (!validTransitions[invitation.status]?.[userStatusInInvitation]?.includes(status)) {
       throw new ForbiddenException(ERRORS_MESSAGES.FORBIDDEN());
+    }
+
+    if (status === InvitationStatus.ACCEPTED) {
+      await this.userGroupService.addToGroup(userId, invitation.groupId);
     }
 
     const updatedInvitation = await this.userRepository.updateInvitation({ status }, invitationId);

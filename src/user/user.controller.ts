@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { UserService } from './user.service';
 import {
-  ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
@@ -103,8 +102,6 @@ export class UserController {
     @Param('id') invitationId: string,
     @Body() updateDto: UpdateInvitationDto,
   ) {
-    console.log(invitationId);
-
     return this.userService.updateInvitation(updateDto, invitationId, userInfo.id);
   }
 }

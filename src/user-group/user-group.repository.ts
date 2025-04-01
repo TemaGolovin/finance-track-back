@@ -17,6 +17,29 @@ export class UserGroupRepository {
           },
         },
       },
+      select: {
+        id: true,
+        name: true,
+        creatorId: true,
+        createAt: true,
+        updateAt: true,
+        creator: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        users: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 
@@ -27,8 +50,8 @@ export class UserGroupRepository {
       },
       data: {
         users: {
-          connect: {
-            id: userId,
+          create: {
+            userId,
           },
         },
       },
@@ -112,6 +135,10 @@ export class UserGroupRepository {
     return await this.prisma.userRelationGroup.delete({
       where: {
         id: groupId,
+      },
+      select: {
+        id: true,
+        name: true,
       },
     });
   }

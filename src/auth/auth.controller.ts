@@ -1,4 +1,4 @@
-import { Body, Controller, Header, Headers, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Headers, Post, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RegistrationDto } from './dto/auth.dto';
 import { ApiWrapperOkResponse } from 'src/decorators/ApiWrapperResponse';

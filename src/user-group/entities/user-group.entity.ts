@@ -1,6 +1,13 @@
 import { ApiProperty, OmitType } from '@nestjs/swagger';
 import { UserEntity } from 'src/user/entity/user.entity';
 
+class UserGroupUserEntity {
+  @ApiProperty({
+    type: OmitType(UserEntity, ['createAt', 'updateAt', 'email'] as const),
+  })
+  user: Omit<UserEntity, 'createAt' | 'updateAt' | 'email'>;
+}
+
 export class UserGroupEntity {
   @ApiProperty({
     example: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
@@ -38,9 +45,9 @@ export class UserGroupEntity {
   updateAt: Date;
 
   @ApiProperty({
-    type: [OmitType(UserEntity, ['createAt', 'updateAt', 'email'] as const)],
+    type: [UserGroupUserEntity],
   })
-  users: Omit<UserEntity, 'createAt' | 'updateAt' | 'email'>[];
+  users: UserGroupUserEntity[];
 
   @ApiProperty({
     type: OmitType(UserEntity, ['createAt', 'updateAt', 'email'] as const),
