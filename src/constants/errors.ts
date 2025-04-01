@@ -15,4 +15,6 @@ export const ERRORS_MESSAGES = {
 
   FORBIDDEN: () => "You don't have access to this resource",
   UNAUTHORIZED: () => 'Unauthorized',
+
+  INVALID_DATE: () => 'Invalid date',
 };

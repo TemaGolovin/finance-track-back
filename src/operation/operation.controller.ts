@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { OperationService } from './operation.service';
 import { CreateOperationDto } from './dto';
 import { ApiWrapperCreatedResponse, ApiWrapperOkResponse } from 'src/decorators/ApiWrapperResponse';
@@ -10,6 +10,7 @@ import {
 import { ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
 import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
+import { GetOperationDto } from './dto/get-operation.dto';
 
 @Controller('operation')
 export class OperationController {
@@ -17,8 +18,11 @@ export class OperationController {
 
   @Get()
   @ApiOkResponse({ type: [OperationEntity] })
-  getOperations(@UserInfo() userInfo: { email: string; name: string; id: string }) {
-    return this.operationService.getOperation(userInfo.id);
+  getOperations(
+    @UserInfo() userInfo: { email: string; name: string; id: string },
+    @Query() { startDate, endDate, operationType }: GetOperationDto,
+  ) {
+    return this.operationService.getOperation(userInfo.id, startDate, endDate, operationType);
   }
 
   @Post()

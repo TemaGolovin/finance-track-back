@@ -6,9 +6,21 @@ import { ERRORS_MESSAGES } from 'src/constants/errors';
 @Injectable()
 export class OperationService {
   constructor(private readonly prisma: PrismaService) {}
-  getOperation(userId: string) {
+  getOperation(
+    userId: string,
+    startDate: string,
+    endDate: string,
+    operationType: 'INCOME' | 'EXPENSE',
+  ) {
     const operations = this.prisma.operation.findMany({
-      where: { userId },
+      where: {
+        userId,
+        operationDate: {
+          ...(startDate && { gte: new Date(startDate) }),
+          ...(endDate && { lte: new Date(endDate) }),
+        },
+        type: operationType,
+      },
     });
 
     return operations;
