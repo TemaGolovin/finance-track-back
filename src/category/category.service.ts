@@ -2,25 +2,24 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
 import { UpdateCategoryDto, CreateCategoryDto } from './dto';
+import { GetStatCategoriesDto } from './dto/get-stat-categories.dto';
+import { CategoryRepository } from './category.repository';
 
 @Injectable()
 export class CategoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly categoryRepository: CategoryRepository,
+  ) {}
 
   async getCategories(userId: string) {
-    const categories = await this.prisma.category.findMany({
-      where: {
-        userId: userId,
-      },
-    });
+    const categories = await this.categoryRepository.getCategories(userId);
 
     return categories;
   }
 
   async createCategory(categoryDto: CreateCategoryDto, userId: string) {
-    const categoryExists = await this.prisma.category.findFirst({
-      where: { name: categoryDto.name.toLowerCase(), userId },
-    });
+    const categoryExists = await this.categoryRepository.findUniqueByName(categoryDto.name, userId);
 
     if (categoryExists) {
       throw new ConflictException(
@@ -32,9 +31,7 @@ export class CategoryService {
       );
     }
 
-    const category = await this.prisma.category.create({
-      data: { ...categoryDto, name: categoryDto.name.toLowerCase(), userId },
-    });
+    const category = await this.categoryRepository.createCategory(categoryDto, userId);
 
     return {
       success: true,
@@ -45,9 +42,11 @@ export class CategoryService {
   async updateCategory(id: string, categoryDto: UpdateCategoryDto, userId: string) {
     await this.validateCategoryExists(id);
 
-    const categoryExists = await this.prisma.category.findFirst({
-      where: { name: categoryDto.name.toLowerCase(), NOT: { id }, userId },
-    });
+    const categoryExists = await this.categoryRepository.findUniqueWithNotId(
+      categoryDto.name,
+      userId,
+      id,
+    );
 
     if (categoryExists) {
       throw new ConflictException(
@@ -59,13 +58,7 @@ export class CategoryService {
       );
     }
 
-    const category = await this.prisma.category.update({
-      where: { id },
-      data: {
-        name: categoryDto.name.toLowerCase(),
-        userId: userId,
-      },
-    });
+    const category = await this.categoryRepository.updateCategory(id, categoryDto);
 
     return {
       success: true,
@@ -76,9 +69,7 @@ export class CategoryService {
   async deleteCategory(id: string, userId: string) {
     await this.validateCategoryExists(id, userId);
 
-    const category = await this.prisma.category.delete({
-      where: { id, userId },
-    });
+    const category = await this.categoryRepository.deleteCategory(id, userId);
 
     return {
       success: true,
@@ -86,10 +77,48 @@ export class CategoryService {
     };
   }
 
-  async validateCategoryExists(id: string, userId?: string): Promise<void> {
-    const operation = await this.prisma.category.findUnique({
-      where: { id, userId },
+  async getStatCategories({
+    userId,
+    startDate,
+    endDate,
+    operationType,
+  }: GetStatCategoriesDto & { userId: string }) {
+    const categories = await this.categoryRepository.findManyWithFilterTypeAndDate({
+      startDate,
+      endDate,
+      operationType,
+      userId,
     });
+
+    const totalSum = categories.reduce(
+      (acc, category) =>
+        acc + category.operations.reduce((acc, operation) => acc + operation.value, 0),
+      0,
+    );
+
+    const statByCategories: { name: string; sum: number; id: string; proportion: number }[] =
+      categories.map((category) => {
+        const categorySum = category.operations.reduce(
+          (acc, operation) => acc + operation.value,
+          0,
+        );
+
+        return {
+          name: category.name,
+          sum: categorySum,
+          id: category.id,
+          proportion: (categorySum / totalSum) * 100,
+        };
+      });
+
+    return {
+      totalSum,
+      categories: statByCategories,
+    };
+  }
+
+  async validateCategoryExists(id: string, userId?: string): Promise<void> {
+    const operation = await this.categoryRepository.findUniqueById(id, userId);
 
     if (!operation) {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Category', id));

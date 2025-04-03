@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class CreateCategoryResponseEntity {
+class Category {
   @ApiProperty({
     description: 'Category id',
     example: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
@@ -19,27 +19,30 @@ export class CreateCategoryResponseEntity {
   name: string;
 
   @ApiProperty({
-    description: 'Category creation date',
-    example: '2023-01-01T00:00:00.000Z',
+    description: 'sum operation in category',
+    example: 100,
     required: true,
-    type: Date,
+    type: Number,
   })
-  createAt: Date;
+  sum: number;
 
   @ApiProperty({
-    description: 'Category update date',
-    example: '2023-01-01T00:00:00.000Z',
+    description: 'Category proportion in percent',
+    example: 23,
     required: true,
-    type: Date,
+    type: Number,
   })
-  updateAt: Date;
+  proportion: number;
 }
 
-export class CategoryResponseEntity extends CreateCategoryResponseEntity {
+export class StatCategoriesEntity {
   @ApiProperty({
-    description: 'user id',
-    example: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
-    type: String,
+    description: 'Total sum of all operations',
+    example: 100,
+    required: true,
   })
-  userId: string;
+  totalSum: number;
+
+  @ApiProperty({ type: [Category] })
+  categories: Category[];
 }

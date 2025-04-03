@@ -22,7 +22,7 @@ export class OperationController {
     @UserInfo() userInfo: { email: string; name: string; id: string },
     @Query() { startDate, endDate, operationType }: GetOperationDto,
   ) {
-    return this.operationService.getOperation(userInfo.id, startDate, endDate, operationType);
+    return this.operationService.getOperations(userInfo.id, startDate, endDate, operationType);
   }
 
   @Post()

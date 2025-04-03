@@ -72,6 +72,7 @@ model Category {
   operations      Operation[]
   user            User?            @relation(fields: [userId], references: [id])
   userId          String?
+  categoryType    OperationType   @default(EXPENSE)
 
   @@unique([name, userId])
 }

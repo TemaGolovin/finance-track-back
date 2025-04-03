@@ -6,7 +6,7 @@ import { ERRORS_MESSAGES } from 'src/constants/errors';
 @Injectable()
 export class OperationService {
   constructor(private readonly prisma: PrismaService) {}
-  getOperation(
+  getOperations(
     userId: string,
     startDate: string,
     endDate: string,
