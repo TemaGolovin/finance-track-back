@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Query, Patch } from '@nestjs/common';
 import { UserGroupService } from './user-group.service';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
@@ -6,6 +6,7 @@ import { ApiCreatedResponse, ApiNotFoundResponse, ApiResponse } from '@nestjs/sw
 import { UserGroupEntity } from './entities/user-group.entity';
 import { USER_GROUP_MESSAGES } from './common/messages';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
+import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
 
 @Controller('user-group')
 export class UserGroupController {
@@ -49,6 +50,21 @@ export class UserGroupController {
     return this.userGroupService.findOne(id, userInfo.id);
   }
 
+  @Get(':groupId/stat')
+  getStat(
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+    @Param('groupId') groupId: string,
+    @Query() { startDate, endDate, operationType }: GetUserGroupStatDto,
+  ) {
+    return this.userGroupService.getUserGroupStat({
+      groupId,
+      userId: userInfo.id,
+      startDate,
+      endDate,
+      operationType,
+    });
+  }
+
   @ApiResponse({
     status: 200,
     example: {
@@ -65,5 +81,18 @@ export class UserGroupController {
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
     return this.userGroupService.remove(id, userInfo.id);
+  }
+
+  @Patch(':groupId/category/connect')
+  connectGroupCategoriesToPersonalCategories(
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+    @Param('groupId') groupId: string,
+    @Body() relatedCategories: { personalCategoryId: string; groupCategoryId: string }[],
+  ) {
+    return this.userGroupService.connectGroupCategoriesToPersonalCategories(
+      relatedCategories,
+      groupId,
+      userInfo.id,
+    );
   }
 }

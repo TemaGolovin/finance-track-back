@@ -12,6 +12,7 @@ import { RegistrationEntity } from './entity/registration.entity';
 import { ResponseWrapper } from 'src/constants/response-wrapper';
 import { JwtService } from '@nestjs/jwt';
 import { AuthRepository } from './auth.repository';
+import { CategoryService } from 'src/category/category.service';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +20,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly authRepository: AuthRepository,
+    private readonly categoryService: CategoryService,
   ) {}
 
   async registration(
@@ -39,6 +41,8 @@ export class AuthService {
         password: hashPassword,
       },
     });
+
+    await this.categoryService.createDefaultCategories(newUser.id, groupId);
 
     const { password, ...userData } = newUser;
 

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto';
 import { GetStatCategoriesDto } from './dto/get-stat-categories.dto';
+import { getDefaultCategories } from 'src/constants/get-default-categories';
 
 @Injectable()
 export class CategoryRepository {
@@ -15,9 +16,9 @@ export class CategoryRepository {
     });
   }
 
-  async findUniqueByName(name: string, userId: string) {
+  async findUniqueByName(name: string, userId: string, categoryType: 'INCOME' | 'EXPENSE') {
     return await this.prisma.category.findUnique({
-      where: { name_userId: { name: name.toLowerCase(), userId } },
+      where: { name_userId_categoryType: { name: name.toLowerCase(), userId, categoryType } },
     });
   }
 
@@ -27,9 +28,17 @@ export class CategoryRepository {
     });
   }
 
-  async findUniqueWithNotId(name: string, userId: string, id: string) {
+  async findUniqueWithNotId(
+    name: string,
+    userId: string,
+    id: string,
+    categoryType: 'INCOME' | 'EXPENSE',
+  ) {
     return await this.prisma.category.findUnique({
-      where: { name_userId: { name: name.toLowerCase(), userId }, NOT: { id } },
+      where: {
+        name_userId_categoryType: { name: name.toLowerCase(), userId, categoryType },
+        NOT: { id },
+      },
     });
   }
 
@@ -77,6 +86,12 @@ export class CategoryRepository {
           },
         },
       },
+    });
+  }
+
+  async createDefaultsCategories(userId: string, groupId?: string) {
+    return await this.prisma.category.createMany({
+      data: getDefaultCategories(userId, groupId),
     });
   }
 }

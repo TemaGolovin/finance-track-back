@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, MinLength } from 'class-validator';
+import { IsEnum, IsString, MinLength } from 'class-validator';
 
 export class UpdateCategoryDto {
   @IsString()
@@ -12,4 +12,13 @@ export class UpdateCategoryDto {
     uniqueItems: true,
   })
   name: string;
+
+  @IsEnum(['INCOME', 'EXPENSE'])
+  @ApiProperty({
+    description: 'Category type',
+    example: 'INCOME',
+    required: true,
+    enum: ['INCOME', 'EXPENSE'],
+  })
+  categoryType: 'INCOME' | 'EXPENSE';
 }

@@ -4,18 +4,26 @@ import { UserGroupRepository } from './user-group.repository';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
 import { USER_GROUP_ERRORS } from './common/errors';
 import { USER_GROUP_MESSAGES } from './common/messages';
+import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
+import { CategoryService } from 'src/category/category.service';
 
 @Injectable()
 export class UserGroupService {
-  constructor(private readonly userGroupRepository: UserGroupRepository) {}
+  constructor(
+    private readonly userGroupRepository: UserGroupRepository,
+    private readonly categoryService: CategoryService,
+  ) {}
 
-  create(createUserGroupDto: CreateUserGroupDto, userId: string) {
-    const newGroup = this.userGroupRepository.createUserGroup(createUserGroupDto, userId);
+  async create(createUserGroupDto: CreateUserGroupDto, userId: string) {
+    const newGroup = await this.userGroupRepository.createUserGroup(createUserGroupDto, userId);
+
+    const personalCategories = await this.categoryService.getCategories(userId);
+    await this.userGroupRepository.createInitGroupCategories(personalCategories, newGroup.id);
 
     return newGroup;
   }
 
-  findAll(userId: string) {
+  async findAll(userId: string) {
     if (!userId) {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('User', userId));
     }
@@ -51,6 +59,25 @@ export class UserGroupService {
     return await this.userGroupRepository.removeUserFromGroup(userId, groupId);
   }
 
+  async getUserGroupStat({
+    groupId,
+    userId,
+  }: { groupId: string; userId: string } & GetUserGroupStatDto) {
+    const group = await this.userGroupRepository.getUserGroupById(groupId);
+
+    if (!group) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+    }
+
+    const userMemberInGroup = group.users.find((user) => user.user.id === userId);
+
+    if (!userMemberInGroup) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+    }
+
+    return this.userGroupRepository.getUserGroupStat(groupId);
+  }
+
   async remove(id: string, userId: string) {
     const groupForDelete = await this.userGroupRepository.getUserGroupById(id);
 
@@ -74,5 +101,25 @@ export class UserGroupService {
       group: deletedGroup,
       message: USER_GROUP_MESSAGES.delete(deletedGroup.name),
     };
+  }
+
+  async connectGroupCategoriesToPersonalCategories(
+    relatedCategories: { personalCategoryId: string; groupCategoryId: string }[],
+    groupId: string,
+    userId: string,
+  ) {
+    const group = await this.userGroupRepository.getUserGroupById(groupId);
+
+    if (!group) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+    }
+
+    const userMemberInGroup = group.users.find((user) => user.user.id === userId);
+
+    if (!userMemberInGroup) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+    }
+
+    return this.userGroupRepository.connectGroupCategoriesToPersonalCategories(relatedCategories);
   }
 }

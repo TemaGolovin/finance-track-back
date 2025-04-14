@@ -1,5 +1,4 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
 import { UpdateCategoryDto, CreateCategoryDto } from './dto';
 import { GetStatCategoriesDto } from './dto/get-stat-categories.dto';
@@ -7,10 +6,7 @@ import { CategoryRepository } from './category.repository';
 
 @Injectable()
 export class CategoryService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly categoryRepository: CategoryRepository,
-  ) {}
+  constructor(private readonly categoryRepository: CategoryRepository) {}
 
   async getCategories(userId: string) {
     const categories = await this.categoryRepository.getCategories(userId);
@@ -19,7 +15,11 @@ export class CategoryService {
   }
 
   async createCategory(categoryDto: CreateCategoryDto, userId: string) {
-    const categoryExists = await this.categoryRepository.findUniqueByName(categoryDto.name, userId);
+    const categoryExists = await this.categoryRepository.findUniqueByName(
+      categoryDto.name,
+      userId,
+      categoryDto.categoryType,
+    );
 
     if (categoryExists) {
       throw new ConflictException(
@@ -46,6 +46,7 @@ export class CategoryService {
       categoryDto.name,
       userId,
       id,
+      categoryDto.categoryType,
     );
 
     if (categoryExists) {
@@ -123,5 +124,9 @@ export class CategoryService {
     if (!operation) {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Category', id));
     }
+  }
+
+  async createDefaultCategories(userId: string, groupId?: string) {
+    return await this.categoryRepository.createDefaultsCategories(userId, groupId);
   }
 }

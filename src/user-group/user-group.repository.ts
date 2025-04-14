@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
+import { Category } from '@prisma/client';
 
 @Injectable()
 export class UserGroupRepository {
@@ -131,6 +132,38 @@ export class UserGroupRepository {
     });
   }
 
+  async getUserGroupStat(groupId: string) {
+    return await this.prisma.userRelationGroup.findUnique({
+      where: {
+        id: groupId,
+      },
+      select: {
+        users: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                categories: {
+                  select: {
+                    id: true,
+                    name: true,
+                    operations: {
+                      select: {
+                        value: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
   async deleteUserGroup(groupId: string) {
     return await this.prisma.userRelationGroup.delete({
       where: {
@@ -140,6 +173,67 @@ export class UserGroupRepository {
         id: true,
         name: true,
       },
+    });
+  }
+
+  async getUserHaveAccessToMe(targetUserId: string, currentUserId: string) {
+    return (
+      (await this.prisma.userRelationGroupUser.count({
+        where: {
+          userId: targetUserId,
+          userRelationGroup: {
+            users: {
+              some: {
+                userId: currentUserId,
+              },
+            },
+          },
+        },
+      })) > 0
+    );
+  }
+
+  async createInitGroupCategories(personalCategories: Category[], groupId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const groupCategoriesPromises = personalCategories.map((category) => {
+        return tx.groupCategory.create({
+          data: {
+            groupId,
+            name: category.name,
+            personalCategories: {
+              create: {
+                categoryId: category.id,
+                userId: category.userId,
+              },
+            },
+          },
+        });
+      });
+
+      return await Promise.all(groupCategoriesPromises);
+    });
+  }
+
+  async connectGroupCategoriesToPersonalCategories(
+    relatedCategories: { personalCategoryId: string; groupCategoryId: string }[],
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const groupCategoriesPromises = relatedCategories.map((category) => {
+        return tx.groupCategory.update({
+          where: {
+            id: category.groupCategoryId,
+          },
+          data: {
+            personalCategories: {
+              connect: {
+                id: category.personalCategoryId,
+              },
+            },
+          },
+        });
+      });
+
+      return await Promise.all(groupCategoriesPromises);
     });
   }
 }

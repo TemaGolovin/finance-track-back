@@ -27,6 +27,7 @@ model User {
   sentInvitations         Invitation[]            @relation("SentInvitations")
   receivedInvitations     Invitation[]            @relation("ReceivedInvitations")
   groupCreator            UserRelationGroup[]
+  categoryGroupMapping    PersonalCategoryMap[]
 }
 
 model UserRelationGroup {
@@ -38,6 +39,7 @@ model UserRelationGroup {
   invitations     Invitation[]
   creator         User            @relation(fields: [creatorId], references: [id])
   creatorId       String
+  userGroupCategory GroupCategory[]
 }
 
 model UserRelationGroupUser {
@@ -48,6 +50,27 @@ model UserRelationGroupUser {
   userRelationGroupId String
 }
 
+model GroupCategory {
+  id                  String           @id @default(uuid())
+  name                String
+  group               UserRelationGroup @relation(fields: [groupId], references: [id])
+  groupId             String
+  personalCategories  PersonalCategoryMap[]
+  
+  @@unique([name, groupId])
+}
+
+model PersonalCategoryMap {
+  id                String        @id @default(uuid())
+  groupCategory     GroupCategory @relation(fields: [groupCategoryId], references: [id])
+  personalCategory  Category      @relation(fields: [categoryId], references: [id])
+  groupCategoryId                 String
+  categoryId        String
+  user              User          @relation(fields: [userId], references: [id])
+  userId            String
+
+  @@unique([groupCategoryId, categoryId, userId])
+}
 
 
 model Operation {
@@ -73,8 +96,12 @@ model Category {
   user            User?            @relation(fields: [userId], references: [id])
   userId          String?
   categoryType    OperationType   @default(EXPENSE)
+  isDefault       Boolean         @default(false)
+  defaultKey      String?
+  groupsMapping   PersonalCategoryMap[]
 
-  @@unique([name, userId])
+  @@unique([name, userId, categoryType])
+  @@unique([defaultKey, userId])
 }
 
 enum OperationType {
