@@ -1,10 +1,9 @@
 import { Body, Controller, Headers, Post, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RegistrationDto } from './dto/auth.dto';
-import { ApiWrapperOkResponse } from 'src/decorators/ApiWrapperResponse';
 import { RegistrationEntity } from './entity/registration.entity';
 import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
-import { ApiConflictResponse, ApiCreatedResponse } from '@nestjs/swagger';
+import { ApiConflictResponse, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { LoginEntity } from './entity/login.entity';
 import { Response } from 'express';
 import { Public } from 'src/decorators/public.decorator';
@@ -18,14 +17,14 @@ export class AuthController {
 
   @Public()
   @Post('registration')
-  @ApiWrapperOkResponse(RegistrationEntity)
+  @ApiOkResponse({ type: RegistrationEntity })
   @ApiConflictResponse({ description: 'name or email already exists', type: TemplateErrorResponse })
   async registration(
     @Res() response: Response,
     @Body() registrationDto: RegistrationDto,
     @Headers('User-agent') userAgent: string,
   ) {
-    const { success, data } = await this.authService.registration(registrationDto, userAgent);
+    const { data } = await this.authService.registration(registrationDto, userAgent);
 
     const { refreshToken, ...dataWithoutRefresh } = data;
 
@@ -37,14 +36,13 @@ export class AuthController {
     });
 
     return response.status(200).json({
-      success,
-      data: dataWithoutRefresh,
+      dataWithoutRefresh,
     });
   }
 
   @Public()
   @Post('login')
-  @ApiWrapperOkResponse(LoginEntity)
+  @ApiOkResponse({ type: LoginEntity })
   async login(
     @Res() response: Response,
     @Body() loginDto: LoginDto,
@@ -61,10 +59,7 @@ export class AuthController {
       path: '/',
     });
 
-    return response.status(200).json({
-      success: true,
-      data: dataWithoutRefresh,
-    });
+    return response.status(200).json(dataWithoutRefresh);
   }
 
   @Public()

@@ -1,13 +1,12 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { OperationService } from './operation.service';
 import { CreateOperationDto } from './dto';
-import { ApiWrapperCreatedResponse, ApiWrapperOkResponse } from 'src/decorators/ApiWrapperResponse';
 import {
   CreateOperationEntity,
   OperationEntity,
   UpdateOperationEntity,
 } from './entity/operation.entity';
-import { ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
+import { ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
 import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
 import { GetOperationDto } from './dto/get-operation.dto';
@@ -26,7 +25,7 @@ export class OperationController {
   }
 
   @Post()
-  @ApiWrapperCreatedResponse(CreateOperationEntity)
+  @ApiCreatedResponse({ type: CreateOperationEntity })
   @ApiNotFoundResponse({ type: TemplateErrorResponse })
   createOperation(
     @Body() dto: CreateOperationDto,
@@ -36,7 +35,7 @@ export class OperationController {
   }
 
   @Put('/:id')
-  @ApiWrapperOkResponse(UpdateOperationEntity)
+  @ApiCreatedResponse({ type: UpdateOperationEntity })
   @ApiNotFoundResponse({ type: TemplateErrorResponse })
   updateOperation(
     @Body() dto: CreateOperationDto,
@@ -47,7 +46,7 @@ export class OperationController {
   }
 
   @Delete('/:id')
-  @ApiWrapperOkResponse(UpdateOperationEntity)
+  @ApiOkResponse({ type: UpdateOperationEntity })
   @ApiNotFoundResponse({ type: TemplateErrorResponse })
   deleteOperation(
     @Param('id') id: string,

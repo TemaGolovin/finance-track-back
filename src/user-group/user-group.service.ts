@@ -6,6 +6,7 @@ import { USER_GROUP_ERRORS } from './common/errors';
 import { USER_GROUP_MESSAGES } from './common/messages';
 import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
 import { CategoryService } from 'src/category/category.service';
+import { ConnectGroupCategoryDto } from './dto/connect-group-category.dto';
 
 @Injectable()
 export class UserGroupService {
@@ -104,7 +105,7 @@ export class UserGroupService {
   }
 
   async connectGroupCategoriesToPersonalCategories(
-    relatedCategories: { personalCategoryId: string; groupCategoryId: string }[],
+    groupCategoryDto: ConnectGroupCategoryDto,
     groupId: string,
     userId: string,
   ) {
@@ -120,6 +121,8 @@ export class UserGroupService {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
     }
 
-    return this.userGroupRepository.connectGroupCategoriesToPersonalCategories(relatedCategories);
+    return this.userGroupRepository.connectGroupCategoriesToPersonalCategories(
+      groupCategoryDto.relatedCategories,
+    );
   }
 }

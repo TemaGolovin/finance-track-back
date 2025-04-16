@@ -2,9 +2,12 @@ import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/
 import { CategoryService } from './category.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto';
 import { CategoryResponseEntity, CreateCategoryResponseEntity } from './entity/category.entity';
-import { ResponseWrapper } from 'src/constants/response-wrapper';
-import { ApiConflictResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
-import { ApiWrapperCreatedResponse, ApiWrapperOkResponse } from 'src/decorators/ApiWrapperResponse';
+import {
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+} from '@nestjs/swagger';
 import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
 import { GetStatCategoriesDto } from './dto/get-stat-categories.dto';
@@ -21,17 +24,17 @@ export class CategoryController {
   }
 
   @Post()
-  @ApiWrapperCreatedResponse(CreateCategoryResponseEntity)
+  @ApiCreatedResponse({ type: CreateCategoryResponseEntity })
   @ApiConflictResponse({ description: 'Category already exists', type: TemplateErrorResponse })
   createCategory(
     @Body() categoryDto: CreateCategoryDto,
     @UserInfo() userInfo: { email: string; name: string; id: string },
-  ): Promise<ResponseWrapper<CreateCategoryResponseEntity>> {
+  ) {
     return this.categoryService.createCategory(categoryDto, userInfo.id);
   }
 
   @Put(':id')
-  @ApiWrapperOkResponse(CreateCategoryResponseEntity)
+  @ApiOkResponse({ type: CreateCategoryResponseEntity })
   @ApiConflictResponse({ description: 'Category already exists', type: TemplateErrorResponse })
   @ApiNotFoundResponse({ description: 'Category not found', type: TemplateErrorResponse })
   updateCategory(
@@ -43,7 +46,7 @@ export class CategoryController {
   }
 
   @Delete(':id')
-  @ApiWrapperOkResponse(CreateCategoryResponseEntity)
+  @ApiOkResponse({ type: CreateCategoryResponseEntity })
   @ApiNotFoundResponse({ description: 'Category not found', type: TemplateErrorResponse })
   deleteCategory(
     @Param('id') id: string,

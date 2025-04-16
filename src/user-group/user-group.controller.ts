@@ -2,11 +2,17 @@ import { Controller, Get, Post, Body, Param, Delete, Query, Patch } from '@nestj
 import { UserGroupService } from './user-group.service';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
-import { ApiCreatedResponse, ApiNotFoundResponse, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { UserGroupEntity } from './entities/user-group.entity';
 import { USER_GROUP_MESSAGES } from './common/messages';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
 import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
+import { ConnectGroupCategoryDto } from './dto/connect-group-category.dto';
 
 @Controller('user-group')
 export class UserGroupController {
@@ -51,12 +57,29 @@ export class UserGroupController {
   }
 
   @Get(':groupId/stat')
-  getStat(
+  @ApiOkResponse({
+    example: [
+      {
+        id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+        name: 'family',
+        totalAmount: 2000,
+      },
+    ],
+    isArray: true,
+  })
+  @ApiNotFoundResponse({
+    example: {
+      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID', 'id'),
+      statusCode: 404,
+      error: 'Not Found',
+    },
+  })
+  async getStat(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
     @Param('groupId') groupId: string,
     @Query() { startDate, endDate, operationType }: GetUserGroupStatDto,
   ) {
-    return this.userGroupService.getUserGroupStat({
+    return await this.userGroupService.getUserGroupStat({
       groupId,
       userId: userInfo.id,
       startDate,
@@ -84,13 +107,27 @@ export class UserGroupController {
   }
 
   @Patch(':groupId/category/connect')
+  @ApiOkResponse({
+    example: {
+      id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+      name: 'family',
+      groupId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+    },
+  })
+  @ApiNotFoundResponse({
+    example: {
+      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID', 'id'),
+      statusCode: 404,
+      error: 'Not Found',
+    },
+  })
   connectGroupCategoriesToPersonalCategories(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
     @Param('groupId') groupId: string,
-    @Body() relatedCategories: { personalCategoryId: string; groupCategoryId: string }[],
+    @Body() groupCategoryDto: ConnectGroupCategoryDto,
   ) {
     return this.userGroupService.connectGroupCategoriesToPersonalCategories(
-      relatedCategories,
+      groupCategoryDto,
       groupId,
       userInfo.id,
     );

@@ -32,8 +32,8 @@ export class UserController {
     return this.userService.findUsersByUsername(name);
   }
 
-  @Post('invite-to-group/by-name')
-  @ApiCreatedResponse({ type: InvitationEntity })
+  @Post('invitation/by-name')
+  @ApiCreatedResponse({ type: InvitationEntity, description: 'invitation created successfully' })
   @ApiForbiddenResponse({
     description: "when user can't invite to this group",
     type: TemplateErrorResponse,
@@ -55,7 +55,7 @@ export class UserController {
     return this.userService.inviteToGroupByName(inviteByNameDto, userInfo.id);
   }
 
-  @Get('invitations')
+  @Get('invitation')
   @ApiOkResponse({
     example: {
       received: [
@@ -94,8 +94,8 @@ export class UserController {
     return this.userService.getInvitations(userInfo.id);
   }
 
-  @Patch('invitations/:id')
-  @ApiResponse({ status: 200, description: 'change status of invitation' })
+  @Patch('invitation/:id')
+  @ApiResponse({ status: 200, description: 'change status of invitation', type: InvitationEntity })
   @ApiQuery({ name: 'id', required: true, description: 'invitation id' })
   changeInvitationStatus(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },

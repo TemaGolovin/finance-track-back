@@ -33,10 +33,7 @@ export class CategoryService {
 
     const category = await this.categoryRepository.createCategory(categoryDto, userId);
 
-    return {
-      success: true,
-      data: category,
-    };
+    return category;
   }
 
   async updateCategory(id: string, categoryDto: UpdateCategoryDto, userId: string) {
@@ -61,10 +58,7 @@ export class CategoryService {
 
     const category = await this.categoryRepository.updateCategory(id, categoryDto);
 
-    return {
-      success: true,
-      data: category,
-    };
+    return category;
   }
 
   async deleteCategory(id: string, userId: string) {
@@ -72,10 +66,7 @@ export class CategoryService {
 
     const category = await this.categoryRepository.deleteCategory(id, userId);
 
-    return {
-      success: true,
-      data: category,
-    };
+    return category;
   }
 
   async getStatCategories({

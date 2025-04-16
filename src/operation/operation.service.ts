@@ -41,10 +41,7 @@ export class OperationService {
       data: { ...createOperationDto, userId },
     });
 
-    return {
-      success: true,
-      data: operation,
-    };
+    return operation;
   }
 
   async updateOperation(id: string, createOperationDto: CreateOperationDto, userId: string) {
@@ -55,10 +52,7 @@ export class OperationService {
       data: createOperationDto,
     });
 
-    return {
-      success: true,
-      data: operation,
-    };
+    return operation;
   }
 
   async deleteOperation(id: string, userId: string) {
@@ -68,10 +62,7 @@ export class OperationService {
       where: { id, userId },
     });
 
-    return {
-      success: true,
-      data: operation,
-    };
+    return operation;
   }
 
   async validateOperationExists(id: string, userId?: string): Promise<void> {

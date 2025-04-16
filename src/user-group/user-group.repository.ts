@@ -133,26 +133,24 @@ export class UserGroupRepository {
   }
 
   async getUserGroupStat(groupId: string) {
-    return await this.prisma.userRelationGroup.findUnique({
-      where: {
-        id: groupId,
-      },
-      select: {
-        users: {
-          select: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                categories: {
-                  select: {
-                    id: true,
-                    name: true,
-                    operations: {
-                      select: {
-                        value: true,
-                        name: true,
-                      },
+    return this.prisma.groupCategory
+      .findMany({
+        where: { groupId },
+        include: {
+          personalCategories: {
+            include: {
+              personalCategory: {
+                include: {
+                  operations: {
+                    // where: {
+                    //   date: {
+                    //     gte: filters?.startDate,
+                    //     lte: filters?.endDate
+                    //   },
+                    //   operationType: filters?.operationType
+                    // },
+                    select: {
+                      value: true,
                     },
                   },
                 },
@@ -160,8 +158,20 @@ export class UserGroupRepository {
             },
           },
         },
-      },
-    });
+      })
+      .then((groups) =>
+        groups.map((group) => ({
+          id: group.id,
+          name: group.name,
+          totalAmount: group.personalCategories.reduce((sum, pc) => {
+            const categorySum = pc.personalCategory.operations.reduce(
+              (catSum, op) => catSum + op.value,
+              0,
+            );
+            return sum + categorySum;
+          }, 0),
+        })),
+      );
   }
 
   async deleteUserGroup(groupId: string) {
