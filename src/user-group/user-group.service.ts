@@ -63,6 +63,7 @@ export class UserGroupService {
   async getUserGroupStat({
     groupId,
     userId,
+    operationType,
   }: { groupId: string; userId: string } & GetUserGroupStatDto) {
     const group = await this.userGroupRepository.getUserGroupById(groupId);
 
@@ -76,7 +77,19 @@ export class UserGroupService {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
     }
 
-    return this.userGroupRepository.getUserGroupStat(groupId);
+    const byCategories = await this.userGroupRepository.getUserGroupStat(groupId, operationType);
+
+    const totalSum = byCategories.reduce((acc, category) => acc + category.totalAmount, 0);
+
+    const byCategoriesWithProportion = byCategories.map((category) => ({
+      ...category,
+      proportion: (category.totalAmount / totalSum) * 100,
+    }));
+
+    return {
+      totalSum,
+      byCategories: byCategoriesWithProportion,
+    };
   }
 
   async remove(id: string, userId: string) {

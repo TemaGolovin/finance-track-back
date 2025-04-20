@@ -80,7 +80,7 @@ export class AuthService {
       id: user.id,
     });
 
-    if (refreshTokenInfo.deviceId === loginDto.deviceId) {
+    if (refreshTokenInfo?.deviceId === loginDto.deviceId) {
       await this.authRepository.deleteRefreshTokenByUserIdDeviceId(user.id, loginDto.deviceId);
     }
 

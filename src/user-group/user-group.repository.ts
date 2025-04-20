@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
-import { Category } from '@prisma/client';
+import { Category, OperationType } from '@prisma/client';
 
 @Injectable()
 export class UserGroupRepository {
@@ -132,23 +132,16 @@ export class UserGroupRepository {
     });
   }
 
-  async getUserGroupStat(groupId: string) {
+  async getUserGroupStat(groupId: string, categoryType?: OperationType) {
     return this.prisma.groupCategory
       .findMany({
-        where: { groupId },
+        where: { groupId, categoryType },
         include: {
           personalCategories: {
             include: {
               personalCategory: {
                 include: {
                   operations: {
-                    // where: {
-                    //   date: {
-                    //     gte: filters?.startDate,
-                    //     lte: filters?.endDate
-                    //   },
-                    //   operationType: filters?.operationType
-                    // },
                     select: {
                       value: true,
                     },

@@ -58,14 +58,17 @@ export class UserGroupController {
 
   @Get(':groupId/stat')
   @ApiOkResponse({
-    example: [
-      {
-        id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
-        name: 'family',
-        totalAmount: 2000,
-      },
-    ],
-    isArray: true,
+    example: {
+      totalSum: 21342,
+      byCategories: [
+        {
+          id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+          name: 'family',
+          totalAmount: 2000,
+          proportion: 9.2,
+        },
+      ],
+    },
   })
   @ApiNotFoundResponse({
     example: {
