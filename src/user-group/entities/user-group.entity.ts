@@ -52,5 +52,5 @@ export class UserGroupEntity {
   @ApiProperty({
     type: OmitType(UserEntity, ['createAt', 'updateAt', 'email'] as const),
   })
-  creator: Omit<UserEntity, 'createAt' | 'updateAt' | 'email'>[];
+  creator: Omit<UserEntity, 'createAt' | 'updateAt' | 'email'>;
 }
