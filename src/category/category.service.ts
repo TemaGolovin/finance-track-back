@@ -82,11 +82,13 @@ export class CategoryService {
       userId,
     });
 
-    const totalSum = categories.reduce(
-      (acc, category) =>
-        acc + category.operations.reduce((acc, operation) => acc + operation.value, 0),
-      0,
-    );
+    const totalSum = categories?.length
+      ? categories.reduce(
+          (acc, category) =>
+            acc + category.operations.reduce((acc, operation) => acc + operation.value, 0),
+          0,
+        )
+      : 0;
 
     const statByCategories: { name: string; sum: number; id: string; proportion: number }[] =
       categories.map((category) => {
@@ -99,7 +101,7 @@ export class CategoryService {
           name: category.name,
           sum: categorySum,
           id: category.id,
-          proportion: (categorySum / totalSum) * 100,
+          proportion: categorySum === 0 || totalSum === 0 ? 0 : (categorySum / totalSum) * 100,
         };
       });
 
