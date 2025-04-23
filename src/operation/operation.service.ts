@@ -1,35 +1,31 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateOperationDto } from './dto';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
+import { OperationRepository } from './operation.repository';
+import { CategoryService } from 'src/category/category.service';
 
 @Injectable()
 export class OperationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly operationRepository: OperationRepository,
+    private readonly categoryService: CategoryService,
+  ) {}
   getOperations(
     userId: string,
     startDate: string,
     endDate: string,
     operationType: 'INCOME' | 'EXPENSE',
   ) {
-    const operations = this.prisma.operation.findMany({
-      where: {
-        userId,
-        operationDate: {
-          ...(startDate && { gte: new Date(startDate) }),
-          ...(endDate && { lte: new Date(endDate) }),
-        },
-        type: operationType,
-      },
+    return this.operationRepository.findManyByUserId({
+      userId,
+      startDate,
+      endDate,
+      operationType,
     });
-
-    return operations;
   }
 
   async createOperation(createOperationDto: CreateOperationDto, userId: string) {
-    const category = await this.prisma.category.findUnique({
-      where: { id: createOperationDto.categoryId, userId },
-    });
+    const category = await this.categoryService.findUniqueById(createOperationDto.categoryId);
 
     if (!category) {
       throw new NotFoundException(
@@ -37,38 +33,23 @@ export class OperationService {
       );
     }
 
-    const operation = await this.prisma.operation.create({
-      data: { ...createOperationDto, userId },
-    });
-
-    return operation;
+    return await this.operationRepository.createOperation(createOperationDto, userId);
   }
 
-  async updateOperation(id: string, createOperationDto: CreateOperationDto, userId: string) {
+  async updateOperation(id: string, createOperationDto: CreateOperationDto) {
     await this.validateOperationExists(id);
 
-    const operation = await this.prisma.operation.update({
-      where: { id, userId },
-      data: createOperationDto,
-    });
-
-    return operation;
+    return this.operationRepository.updateOperation(id, createOperationDto);
   }
 
-  async deleteOperation(id: string, userId: string) {
-    await this.validateOperationExists(id, userId);
+  async deleteOperation(id: string) {
+    await this.validateOperationExists(id);
 
-    const operation = await this.prisma.operation.delete({
-      where: { id, userId },
-    });
-
-    return operation;
+    return await this.operationRepository.deleteOperation(id);
   }
 
-  async validateOperationExists(id: string, userId?: string): Promise<void> {
-    const operation = await this.prisma.operation.findUnique({
-      where: { id, userId },
-    });
+  async validateOperationExists(id: string): Promise<void> {
+    const operation = await this.operationRepository.findUniqueById(id);
 
     if (!operation) {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Operation', id));

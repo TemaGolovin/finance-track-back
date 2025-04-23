@@ -37,21 +37,14 @@ export class OperationController {
   @Put('/:id')
   @ApiCreatedResponse({ type: UpdateOperationEntity })
   @ApiNotFoundResponse({ type: TemplateErrorResponse })
-  updateOperation(
-    @Body() dto: CreateOperationDto,
-    @Param('id') id: string,
-    @UserInfo() userInfo: { email: string; name: string; id: string },
-  ) {
-    return this.operationService.updateOperation(id, dto, userInfo.id);
+  updateOperation(@Body() dto: CreateOperationDto, @Param('id') id: string) {
+    return this.operationService.updateOperation(id, dto);
   }
 
   @Delete('/:id')
   @ApiOkResponse({ type: UpdateOperationEntity })
   @ApiNotFoundResponse({ type: TemplateErrorResponse })
-  deleteOperation(
-    @Param('id') id: string,
-    @UserInfo() userInfo: { email: string; name: string; id: string },
-  ) {
-    return this.operationService.deleteOperation(id, userInfo.id);
+  deleteOperation(@Param('id') id: string) {
+    return this.operationService.deleteOperation(id);
   }
 }

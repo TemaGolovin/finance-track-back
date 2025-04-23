@@ -62,7 +62,7 @@ export class CategoryService {
   }
 
   async deleteCategory(id: string, userId: string) {
-    await this.validateCategoryExists(id, userId);
+    await this.validateCategoryExists(id);
 
     const category = await this.categoryRepository.deleteCategory(id, userId);
 
@@ -109,15 +109,19 @@ export class CategoryService {
     };
   }
 
-  async validateCategoryExists(id: string, userId?: string): Promise<void> {
-    const operation = await this.categoryRepository.findUniqueById(id, userId);
+  async validateCategoryExists(id: string): Promise<void> {
+    const category = await this.findUniqueById(id);
 
-    if (!operation) {
+    if (!category) {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Category', id));
     }
   }
 
   async createDefaultCategories(userId: string, groupId?: string) {
     return await this.categoryRepository.createDefaultsCategories(userId, groupId);
+  }
+
+  async findUniqueById(id: string) {
+    return await this.categoryRepository.findUniqueById(id);
   }
 }

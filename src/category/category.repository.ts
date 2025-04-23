@@ -22,9 +22,9 @@ export class CategoryRepository {
     });
   }
 
-  async findUniqueById(id: string, userId: string) {
+  async findUniqueById(id: string) {
     return await this.prisma.category.findUnique({
-      where: { id, userId },
+      where: { id },
     });
   }
 
