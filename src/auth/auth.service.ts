@@ -243,7 +243,7 @@ export class AuthService {
     refreshToken: string;
     userId: string;
     deviceId: string;
-    userAgent: string;
+    userAgent?: string;
   }) {
     const hashedRefreshToken = await hash(refreshToken, 10);
     await this.authRepository.createRefreshToken({

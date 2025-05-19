@@ -119,7 +119,7 @@ model RefreshToken {
   userId          String
   deviceId        String
   expiresAt       DateTime
-  userAgent       String
+  userAgent       String?
 
   @@index([userId, deviceId])
   @@unique([userId, deviceId])

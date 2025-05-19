@@ -36,7 +36,7 @@ export class AuthController {
     });
 
     return response.status(200).json({
-      dataWithoutRefresh,
+      ...dataWithoutRefresh,
     });
   }
 

@@ -19,8 +19,8 @@ const testUpdateDto: CreateCategoryDto = {
 
 const mockUser = {
   id: '12341234-1234-1234-1234-123412341234',
-  email: 'test@example.com',
-  name: 'Test User',
+  email: 'category-test@example.com',
+  name: 'Category Test User',
 };
 
 describe('CategoryController (e2e)', () => {
