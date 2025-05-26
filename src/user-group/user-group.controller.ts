@@ -111,11 +111,23 @@ export class UserGroupController {
 
   @Patch(':groupId/category/connect')
   @ApiOkResponse({
-    example: {
-      id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
-      name: 'family',
-      groupId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
-    },
+    example: [
+      {
+        id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+        name: 'family',
+        groupId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+        categoryType: 'EXPENSE',
+        defaultKey: 'family',
+        personalCategories: [
+          {
+            id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+            groupCategoryId: '915b0044-0ad3-4790-bc1e-0d0d6d726207',
+            categoryId: 'd8f4e185-fa72-4ead-97d3-2818ad965e6d',
+            userId: '87654321-1234-1234-1234-abcdefghijkl',
+          },
+        ],
+      },
+    ],
   })
   @ApiNotFoundResponse({
     example: {
