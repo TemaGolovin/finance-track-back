@@ -16,6 +16,7 @@ export class UserRepository {
 
   findUsersByUsername(
     name: string,
+    excludeId?: string,
     select: { id?: boolean; name?: boolean; email?: boolean } = { id: true, name: true },
   ) {
     return this.prisma.user.findMany({
@@ -23,6 +24,9 @@ export class UserRepository {
         name: {
           contains: name,
           mode: 'insensitive',
+        },
+        NOT: {
+          id: excludeId,
         },
       },
       select: select,

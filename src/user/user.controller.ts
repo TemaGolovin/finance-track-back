@@ -14,6 +14,7 @@ import { InvitationEntity } from './entity/invitation.entity';
 import { UpdateInvitationDto } from './dto/update-invitation.dto';
 import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
 import { USER_ERRORS } from './common/errors';
+import { InvitationStatus } from '@prisma/client';
 
 @Controller('user')
 export class UserController {
@@ -25,11 +26,14 @@ export class UserController {
     example: [{ id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b', name: 'voin123' }],
     isArray: true,
   })
-  findUsersByUsername(@Query('name') name: string) {
+  findUsersByUsername(
+    @Query('name') name: string,
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+  ) {
     if (!name) {
       return [];
     }
-    return this.userService.findUsersByUsername(name);
+    return this.userService.findUsersByUsername(name, userInfo.id);
   }
 
   @Post('invitation/by-name')
@@ -66,6 +70,7 @@ export class UserController {
           groupId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
           senderId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
           recipientId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+          status: InvitationStatus.PENDING,
           sender: {
             name: 'voin123',
           },
@@ -79,6 +84,7 @@ export class UserController {
           groupId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
           senderId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
           recipientId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+          status: InvitationStatus.PENDING,
           recipient: {
             name: 'voin123',
           },

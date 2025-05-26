@@ -219,6 +219,7 @@ export class UserGroupRepository {
 
   async connectGroupCategoriesToPersonalCategories(
     relatedCategories: { personalCategoryId: string; groupCategoryId: string }[],
+    userId: string,
   ) {
     return this.prisma.$transaction(async (tx) => {
       const groupCategoriesPromises = relatedCategories.map((category) => {
@@ -228,10 +229,14 @@ export class UserGroupRepository {
           },
           data: {
             personalCategories: {
-              connect: {
-                id: category.personalCategoryId,
+              create: {
+                userId,
+                categoryId: category.personalCategoryId,
               },
             },
+          },
+          include: {
+            personalCategories: true,
           },
         });
       });

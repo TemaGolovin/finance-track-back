@@ -53,7 +53,7 @@ model UserRelationGroupUser {
 model GroupCategory {
   id                  String           @id @default(uuid())
   name                String
-  group               UserRelationGroup @relation(fields: [groupId], references: [id])
+  group               UserRelationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId             String
   defaultKey          String?
   categoryType        OperationType   @default(EXPENSE)
@@ -64,8 +64,8 @@ model GroupCategory {
 
 model PersonalCategoryMap {
   id                String        @id @default(uuid())
-  groupCategory     GroupCategory @relation(fields: [groupCategoryId], references: [id])
-  personalCategory  Category      @relation(fields: [categoryId], references: [id])
+  groupCategory     GroupCategory @relation(fields: [groupCategoryId], references: [id], onDelete: Cascade)
+  personalCategory  Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   groupCategoryId   String
   categoryId        String
   user              User          @relation(fields: [userId], references: [id])

@@ -18,8 +18,8 @@ export class UserService {
     private readonly userRepository: UserRepository,
     private readonly userGroupService: UserGroupService,
   ) {}
-  async findUsersByUsername(username: string) {
-    return await this.userRepository.findUsersByUsername(username);
+  async findUsersByUsername(username: string, userId: string) {
+    return await this.userRepository.findUsersByUsername(username, userId);
   }
 
   async inviteToGroupByName(inviteByNameDto: InviteToGroupByNameDto, senderId: string) {

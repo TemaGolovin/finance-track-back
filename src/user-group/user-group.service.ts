@@ -136,6 +136,7 @@ export class UserGroupService {
 
     return this.userGroupRepository.connectGroupCategoriesToPersonalCategories(
       groupCategoryDto.relatedCategories,
+      userId,
     );
   }
 }
