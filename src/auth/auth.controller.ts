@@ -30,8 +30,14 @@ export class AuthController {
 
     response.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      sameSite: 'strict',
-      secure: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/',
+    });
+    response.cookie('accessToken', dataWithoutRefresh.token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
       path: '/',
     });
 
@@ -54,8 +60,15 @@ export class AuthController {
 
     response.cookie('refreshToken', refreshToken, {
       httpOnly: true,
-      sameSite: 'strict',
-      secure: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/',
+    });
+
+    response.cookie('accessToken', dataWithoutRefresh.token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
       path: '/',
     });
 
@@ -76,8 +89,15 @@ export class AuthController {
 
     response.cookie('refreshToken', newRefreshToken, {
       httpOnly: true,
-      sameSite: 'strict',
-      secure: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/',
+    });
+
+    response.cookie('accessToken', dataWithoutRefresh.token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
       path: '/',
     });
 
@@ -95,6 +115,7 @@ export class AuthController {
   ) {
     await this.authService.logout(userInfo);
     response.clearCookie('refreshToken');
+    response.clearCookie('accessToken');
     return response.status(200).json({
       success: true,
     });
