@@ -100,6 +100,8 @@ model Category {
   categoryType    OperationType   @default(EXPENSE)
   defaultKey      String?
   groupsMapping   PersonalCategoryMap[]
+  color           String?
+  icon            String?
 
   @@unique([name, userId, categoryType])
   @@unique([defaultKey, userId])

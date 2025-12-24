@@ -9,6 +9,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'supermarket',
+    color: '#4CAF50',
+    icon: 'ShoppingCart',
     ...(groupId && { groupId }),
   },
   {
@@ -16,6 +18,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'cafe',
+    color: '#FF7043',
+    icon: 'Utensils',
     ...(groupId && { groupId }),
   },
   {
@@ -23,6 +27,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'transport',
+    color: '#42A5F5',
+    icon: 'Bus',
     ...(groupId && { groupId }),
   },
   {
@@ -30,6 +36,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'home',
+    color: '#8D6E63',
+    icon: 'Home',
     ...(groupId && { groupId }),
   },
   {
@@ -37,6 +45,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'health',
+    color: '#EF5350',
+    icon: 'HeartPulse',
     ...(groupId && { groupId }),
   },
   {
@@ -44,6 +54,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'education',
+    color: '#7E57C2',
+    icon: 'GraduationCap',
     ...(groupId && { groupId }),
   },
   {
@@ -51,6 +63,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'entertainment',
+    color: '#AB47BC',
+    icon: 'Gamepad2',
     ...(groupId && { groupId }),
   },
   {
@@ -58,6 +72,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'clothes',
+    color: '#26A69A',
+    icon: 'Shirt',
     ...(groupId && { groupId }),
   },
   {
@@ -65,6 +81,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'communication',
+    color: '#29B6F6',
+    icon: 'Smartphone',
     ...(groupId && { groupId }),
   },
   {
@@ -72,6 +90,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'expenseGifts',
+    color: '#EC407A',
+    icon: 'Gift',
     ...(groupId && { groupId }),
   },
   {
@@ -79,6 +99,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'travel',
+    color: '#26C6DA',
+    icon: 'Plane',
     ...(groupId && { groupId }),
   },
   {
@@ -86,6 +108,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'auto',
+    color: '#78909C',
+    icon: 'Car',
     ...(groupId && { groupId }),
   },
   {
@@ -93,6 +117,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'sport',
+    color: '#66BB6A',
+    icon: 'Dumbbell',
     ...(groupId && { groupId }),
   },
   {
@@ -100,6 +126,8 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'pets',
+    color: '#FFB300',
+    icon: 'PawPrint',
     ...(groupId && { groupId }),
   },
   {
@@ -107,13 +135,20 @@ export const getDefaultCategories = (
     categoryType: 'EXPENSE',
     userId,
     defaultKey: 'expenseOther',
+    color: '#9E9E9E',
+    icon: 'MoreHorizontal',
     ...(groupId && { groupId }),
   },
+
+  // INCOME
+
   {
     name: 'Зарплата',
     categoryType: 'INCOME',
     userId,
     defaultKey: 'salary',
+    color: '#43A047',
+    icon: 'Wallet',
     ...(groupId && { groupId }),
   },
   {
@@ -121,6 +156,8 @@ export const getDefaultCategories = (
     categoryType: 'INCOME',
     userId,
     defaultKey: 'part-time',
+    color: '#66BB6A',
+    icon: 'Briefcase',
     ...(groupId && { groupId }),
   },
   {
@@ -128,6 +165,8 @@ export const getDefaultCategories = (
     categoryType: 'INCOME',
     userId,
     defaultKey: 'incomeGifts',
+    color: '#FFCA28',
+    icon: 'Gift',
     ...(groupId && { groupId }),
   },
   {
@@ -135,6 +174,8 @@ export const getDefaultCategories = (
     categoryType: 'INCOME',
     userId,
     defaultKey: 'incomeOther',
+    color: '#9E9E9E',
+    icon: 'MoreHorizontal',
     ...(groupId && { groupId }),
   },
 ];

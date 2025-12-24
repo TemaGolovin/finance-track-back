@@ -107,6 +107,8 @@ export class CategoryService {
               type: category.categoryType,
               id: category.id,
               proportion: categorySum === 0 || totalSum === 0 ? 0 : (categorySum / totalSum) * 100,
+              color: category.color,
+              icon: category.icon,
             },
           ];
         }
