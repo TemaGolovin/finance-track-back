@@ -91,19 +91,28 @@ export class CategoryService {
       : 0;
 
     const statByCategories: { name: string; sum: number; id: string; proportion: number }[] =
-      categories.map((category) => {
+      categories.reduce((acc, category) => {
         const categorySum = category.operations.reduce(
           (acc, operation) => acc + operation.value,
           0,
         );
 
-        return {
-          name: category.name,
-          sum: categorySum,
-          id: category.id,
-          proportion: categorySum === 0 || totalSum === 0 ? 0 : (categorySum / totalSum) * 100,
-        };
-      });
+        if (categorySum > 0) {
+          const copyAcc = acc;
+          return [
+            ...copyAcc,
+            {
+              name: category.name,
+              sum: categorySum,
+              type: category.categoryType,
+              id: category.id,
+              proportion: categorySum === 0 || totalSum === 0 ? 0 : (categorySum / totalSum) * 100,
+            },
+          ];
+        }
+
+        return acc;
+      }, []);
 
     return {
       totalSum,

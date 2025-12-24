@@ -71,14 +71,7 @@ describe('CategoryService', () => {
     });
 
     expect(result).toEqual({
-      categories: [
-        {
-          id: '1',
-          name: 'test',
-          sum: 0,
-          proportion: 0,
-        },
-      ],
+      categories: [],
       totalSum: 0,
     });
   });
@@ -125,13 +118,16 @@ describe('CategoryService', () => {
   });
 
   it('getStatCategories method category MANY - success', async () => {
-    const existedManyCategories: CategoryWithOperations[] = [
+    const existedManyCategories: (CategoryWithOperations & {
+      categoryType: 'INCOME' | 'EXPENSE';
+    })[] = [
       {
         createAt: creationDate,
         updateAt: creationDate,
         userId: '1',
         id: '0',
         name: 'test',
+        categoryType: 'INCOME',
         operations: [
           {
             value: 400,
@@ -147,6 +143,7 @@ describe('CategoryService', () => {
         userId: '1',
         id: '1',
         name: 'test 1',
+        categoryType: 'INCOME',
         operations: [
           {
             value: 500,
@@ -159,6 +156,7 @@ describe('CategoryService', () => {
         userId: '1',
         id: '2',
         name: 'test 2',
+        categoryType: 'INCOME',
         operations: [],
       },
       {
@@ -167,6 +165,7 @@ describe('CategoryService', () => {
         userId: '1',
         id: '3',
         name: 'test 3',
+        categoryType: 'INCOME',
         operations: [
           {
             value: 200,
@@ -200,24 +199,21 @@ describe('CategoryService', () => {
           name: 'test',
           sum: 500,
           proportion: 25,
+          type: 'INCOME',
         },
         {
           id: '1',
           name: 'test 1',
           sum: 500,
           proportion: 25,
-        },
-        {
-          id: '2',
-          name: 'test 2',
-          sum: 0,
-          proportion: 0,
+          type: 'INCOME',
         },
         {
           id: '3',
           name: 'test 3',
           sum: 1000,
           proportion: 50,
+          type: 'INCOME',
         },
       ],
       totalSum: 2000,

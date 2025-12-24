@@ -72,6 +72,7 @@ export class CategoryRepository {
     return await this.prisma.category.findMany({
       where: {
         userId,
+        categoryType: operationType,
       },
       include: {
         operations: {
@@ -82,6 +83,9 @@ export class CategoryRepository {
             },
             type: {
               equals: operationType,
+            },
+            value: {
+              gt: 0,
             },
           },
         },

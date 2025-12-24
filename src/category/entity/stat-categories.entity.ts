@@ -33,6 +33,14 @@ class Category {
     type: Number,
   })
   proportion: number;
+
+  @ApiProperty({
+    description: 'Category color',
+    example: '#ff0000',
+    required: true,
+    type: String,
+  })
+  type: string;
 }
 
 export class StatCategoriesEntity {
