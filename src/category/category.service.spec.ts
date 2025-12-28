@@ -43,9 +43,17 @@ describe('CategoryService', () => {
       startDate: '2025-01-12T20:17:46.384Z',
       endDate: '2025-01-12T20:17:46.384Z',
     });
-    expect(result).toEqual({
+    expect({
+      ...result,
+      categories: result.categories.map((category) => ({
+        ...category,
+        sum: category.sum.toString(),
+        proportion: category.proportion.toString(),
+      })),
+      totalSum: result.totalSum.toString(),
+    }).toEqual({
       categories: [],
-      totalSum: 0,
+      totalSum: '0',
     });
   });
 
@@ -70,9 +78,17 @@ describe('CategoryService', () => {
       endDate: '2025-01-12T20:17:46.384Z',
     });
 
-    expect(result).toEqual({
+    expect({
+      ...result,
+      categories: result.categories.map((category) => ({
+        ...category,
+        sum: category.sum.toString(),
+        proportion: category.proportion.toString(),
+      })),
+      totalSum: result.totalSum.toString(),
+    }).toEqual({
       categories: [],
-      totalSum: 0,
+      totalSum: '0',
     });
   });
 
@@ -104,16 +120,24 @@ describe('CategoryService', () => {
       endDate: '2025-01-12T20:17:46.384Z',
     });
 
-    expect(result).toEqual({
+    expect({
+      ...result,
+      categories: result.categories.map((category) => ({
+        ...category,
+        sum: category.sum.toString(),
+        proportion: category.proportion.toString(),
+      })),
+      totalSum: result.totalSum.toString(),
+    }).toEqual({
       categories: [
         {
           id: '1',
           name: 'test',
-          sum: 300,
-          proportion: 100,
+          sum: '300',
+          proportion: '100',
         },
       ],
-      totalSum: 300,
+      totalSum: '300',
     });
   });
 
@@ -128,6 +152,8 @@ describe('CategoryService', () => {
         id: '0',
         name: 'test',
         categoryType: 'INCOME',
+        color: '#000000',
+        icon: 'CategoryIcon',
         operations: [
           {
             value: 400,
@@ -144,6 +170,8 @@ describe('CategoryService', () => {
         id: '1',
         name: 'test 1',
         categoryType: 'INCOME',
+        color: '#000000',
+        icon: 'CategoryIcon',
         operations: [
           {
             value: 500,
@@ -157,6 +185,8 @@ describe('CategoryService', () => {
         id: '2',
         name: 'test 2',
         categoryType: 'INCOME',
+        color: '#000000',
+        icon: 'CategoryIcon',
         operations: [],
       },
       {
@@ -166,6 +196,8 @@ describe('CategoryService', () => {
         id: '3',
         name: 'test 3',
         categoryType: 'INCOME',
+        color: '#000000',
+        icon: 'CategoryIcon',
         operations: [
           {
             value: 200,
@@ -192,31 +224,45 @@ describe('CategoryService', () => {
       endDate: '2025-01-12T20:17:46.384Z',
     });
 
-    expect(result).toEqual({
+    expect({
+      ...result,
+      categories: result.categories.map((category) => ({
+        ...category,
+        sum: category.sum.toString(),
+        proportion: category.proportion.toString(),
+      })),
+      totalSum: result.totalSum.toString(),
+    }).toEqual({
       categories: [
+        {
+          id: '3',
+          name: 'test 3',
+          sum: '1000',
+          proportion: '50',
+          type: 'INCOME',
+          color: '#000000',
+          icon: 'CategoryIcon',
+        },
         {
           id: '0',
           name: 'test',
-          sum: 500,
-          proportion: 25,
+          sum: '500',
+          proportion: '25',
           type: 'INCOME',
+          color: '#000000',
+          icon: 'CategoryIcon',
         },
         {
           id: '1',
           name: 'test 1',
-          sum: 500,
-          proportion: 25,
+          sum: '500',
+          proportion: '25',
           type: 'INCOME',
-        },
-        {
-          id: '3',
-          name: 'test 3',
-          sum: 1000,
-          proportion: 50,
-          type: 'INCOME',
+          color: '#000000',
+          icon: 'CategoryIcon',
         },
       ],
-      totalSum: 2000,
+      totalSum: '2000',
     });
   });
 

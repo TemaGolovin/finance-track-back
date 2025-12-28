@@ -3,13 +3,14 @@ import { ERRORS_MESSAGES } from 'src/constants/errors';
 import { UpdateCategoryDto, CreateCategoryDto } from './dto';
 import { GetStatCategoriesDto } from './dto/get-stat-categories.dto';
 import { CategoryRepository } from './category.repository';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CategoryService {
   constructor(private readonly categoryRepository: CategoryRepository) {}
 
-  async getCategories(userId: string) {
-    const categories = await this.categoryRepository.getCategories(userId);
+  async getCategories(userId: string, type?: 'EXPENSE' | 'INCOME') {
+    const categories = await this.categoryRepository.getCategories(userId, type);
 
     return categories;
   }
@@ -84,21 +85,29 @@ export class CategoryService {
 
     const totalSum = categories?.length
       ? categories.reduce(
-          (acc, category) =>
-            acc + category.operations.reduce((acc, operation) => acc + operation.value, 0),
-          0,
+          (acc: Prisma.Decimal, category) =>
+            acc.plus(
+              category.operations.reduce(
+                (acc: Prisma.Decimal, operation) => acc.plus(operation.value),
+                new Prisma.Decimal(0),
+              ),
+            ),
+          new Prisma.Decimal(0),
         )
-      : 0;
+      : new Prisma.Decimal(0);
 
     const statByCategories: { name: string; sum: number; id: string; proportion: number }[] =
       categories
         .reduce((acc, category) => {
           const categorySum = category.operations.reduce(
-            (acc, operation) => acc + operation.value,
-            0,
+            (acc: Prisma.Decimal, operation) => acc.plus(operation.value),
+            new Prisma.Decimal(0),
           );
 
-          if (categorySum > 0) {
+          if (categorySum.greaterThan(0)) {
+            const ZERO = new Prisma.Decimal(0);
+            const HUNDRED = new Prisma.Decimal(100);
+
             const copyAcc = acc;
             return [
               ...copyAcc,
@@ -108,7 +117,9 @@ export class CategoryService {
                 type: category.categoryType,
                 id: category.id,
                 proportion:
-                  categorySum === 0 || totalSum === 0 ? 0 : (categorySum / totalSum) * 100,
+                  categorySum.equals(ZERO) || totalSum.equals(ZERO)
+                    ? ZERO
+                    : categorySum.div(totalSum).mul(HUNDRED),
                 color: category.color,
                 icon: category.icon,
               },

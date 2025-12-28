@@ -9,13 +9,13 @@ export class OperationEntity {
   id: string;
 
   @ApiProperty({
-    description: 'Operation name',
+    description: 'Operation comment',
     example: 'Food',
-    required: true,
+    required: false,
     type: String,
     uniqueItems: true,
   })
-  name: string;
+  comment: string;
 
   @ApiProperty({
     description: 'Operation value',

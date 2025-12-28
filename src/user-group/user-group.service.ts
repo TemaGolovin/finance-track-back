@@ -7,6 +7,7 @@ import { USER_GROUP_MESSAGES } from './common/messages';
 import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
 import { CategoryService } from 'src/category/category.service';
 import { ConnectGroupCategoryDto } from './dto/connect-group-category.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UserGroupService {
@@ -79,11 +80,14 @@ export class UserGroupService {
 
     const byCategories = await this.userGroupRepository.getUserGroupStat(groupId, operationType);
 
-    const totalSum = byCategories.reduce((acc, category) => acc + category.totalAmount, 0);
+    const totalSum = byCategories.reduce(
+      (acc: Prisma.Decimal, category) => acc.plus(category.totalAmount),
+      new Prisma.Decimal(0),
+    );
 
     const byCategoriesWithProportion = byCategories.map((category) => ({
       ...category,
-      proportion: (category.totalAmount / totalSum) * 100,
+      proportion: category.totalAmount.div(totalSum).mul(new Prisma.Decimal(100)),
     }));
 
     return {

@@ -60,7 +60,7 @@ describe('UserGroupController (e2e)', () => {
         userId: mockUser.id,
         operations: {
           create: {
-            name: 'Test Operation',
+            comment: 'Test Operation',
             value: 100,
             operationDate: new Date(),
             userId: mockUser.id,
@@ -108,7 +108,7 @@ describe('UserGroupController (e2e)', () => {
             userId: mockUser.id,
             operations: {
               create: {
-                name: 'Test Operation after group creation',
+                comment: 'Test Operation after group creation',
                 value: 399,
                 operationDate: new Date(),
                 userId: mockUser.id,
@@ -158,7 +158,7 @@ describe('UserGroupController (e2e)', () => {
         expect(body).toBeDefined();
         expect(body.totalSum).toBeDefined();
         expect(body.byCategories).toBeDefined();
-        expect(body.totalSum).toBe(100);
+        expect(body.totalSum).toBe('100');
 
         expect(body.byCategories.length).toBe(2);
       });

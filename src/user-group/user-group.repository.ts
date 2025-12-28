@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
-import { Category, OperationType } from '@prisma/client';
+import { Category, OperationType, Prisma } from '@prisma/client';
 
 @Injectable()
 export class UserGroupRepository {
@@ -156,13 +156,13 @@ export class UserGroupRepository {
         groups.map((group) => ({
           id: group.id,
           name: group.name,
-          totalAmount: group.personalCategories.reduce((sum, pc) => {
+          totalAmount: group.personalCategories.reduce((sum: Prisma.Decimal, pc) => {
             const categorySum = pc.personalCategory.operations.reduce(
-              (catSum, op) => catSum + op.value,
-              0,
+              (catSum: Prisma.Decimal, op) => catSum.plus(op.value),
+              new Prisma.Decimal(0),
             );
-            return sum + categorySum;
-          }, 0),
+            return sum.plus(categorySum);
+          }, new Prisma.Decimal(0)),
         })),
       );
   }

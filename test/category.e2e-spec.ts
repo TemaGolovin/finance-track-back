@@ -10,11 +10,15 @@ import { APP_GUARD } from '@nestjs/core';
 const testCreateDto: CreateCategoryDto = {
   name: 'test category',
   categoryType: 'INCOME',
+  color: '#000000',
+  icon: 'CategoryIcon',
 };
 
 const testUpdateDto: CreateCategoryDto = {
   name: 'Updated Test Category',
   categoryType: 'INCOME',
+  color: '#000000',
+  icon: 'CategoryIcon',
 };
 
 const mockUser = {
@@ -112,7 +116,7 @@ describe('CategoryController (e2e)', () => {
       .expect(200)
       .then((res) => {
         expect(res.body).toBeDefined();
-        expect(res.body.totalSum).toEqual(0);
+        expect(res.body.totalSum).toEqual('0');
       });
   });
 

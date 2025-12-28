@@ -24,7 +24,7 @@ export const createDefaultCategoriesWithOperations = async (
     data: createdCategories.map((category, index) => {
       return {
         categoryId: category.id,
-        name: `Operation ${index + 1} ${category.name}`,
+        comment: index % 2 === 0 ? `Operation ${index + 1} ${category.name}` : undefined,
         type: index % 3 === 0 ? 'INCOME' : 'EXPENSE',
         value: genInteger(10, 10000),
         userId,

@@ -19,8 +19,11 @@ export class CategoryController {
 
   @Get()
   @ApiOkResponse({ type: CategoryResponseEntity, isArray: true })
-  getCategories(@UserInfo() userInfo: { email: string; name: string; id: string }) {
-    return this.categoryService.getCategories(userInfo.id);
+  getCategories(
+    @UserInfo() userInfo: { email: string; name: string; id: string },
+    @Query() { type }: { type: 'EXPENSE' | 'INCOME' },
+  ) {
+    return this.categoryService.getCategories(userInfo.id, type);
   }
 
   @Post()

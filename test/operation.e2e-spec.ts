@@ -9,14 +9,14 @@ import { CreateOperationDto } from 'src/operation/dto';
 import { CreateOperationEntity, OperationEntity } from 'src/operation/entity/operation.entity';
 
 const testCreateDto: Omit<CreateOperationDto, 'categoryId'> = {
-  name: 'operation name test',
+  comment: 'operation name comment',
   operationDate: '2025-01-01T00:00:00.000Z',
   value: 100,
   type: 'INCOME',
 };
 
 const testUpdateDto: Omit<CreateOperationDto, 'categoryId'> = {
-  name: 'updated operation name test',
+  comment: 'updated operation comment test',
   operationDate: '2025-01-01T00:00:00.000Z',
   value: 5000,
   type: 'INCOME',
@@ -94,9 +94,9 @@ describe('OperationController (e2e)', () => {
       .expect(201)
       .then(({ body }: { body: CreateOperationEntity }) => {
         createdOperationId = body.id;
-        expect(body.name).toBe(testCreateDto.name);
+        expect(body.comment).toBe(testCreateDto.comment);
         expect(body.operationDate).toBe(testCreateDto.operationDate);
-        expect(body.value).toBe(testCreateDto.value);
+        expect(body.value).toBe(`${testCreateDto.value}`);
         expect(body.categoryId).toBe(createdCategoryId);
       });
   });
@@ -108,9 +108,9 @@ describe('OperationController (e2e)', () => {
       .then(({ body }: { body: OperationEntity[] }) => {
         expect(body.length).toBe(1);
         expect(body[0].id).toBe(createdOperationId);
-        expect(body[0].name).toBe(testCreateDto.name);
+        expect(body[0].comment).toBe(testCreateDto.comment);
         expect(body[0].operationDate).toBe(testCreateDto.operationDate);
-        expect(body[0].value).toBe(testCreateDto.value);
+        expect(body[0].value).toBe(`${testCreateDto.value}`);
       });
   });
 
@@ -120,9 +120,9 @@ describe('OperationController (e2e)', () => {
       .send(testUpdateDto)
       .expect(200)
       .then(({ body }: { body: CreateOperationDto }) => {
-        expect(body.name).toBe(testUpdateDto.name);
+        expect(body.comment).toBe(testUpdateDto.comment);
         expect(body.operationDate).toBe(testUpdateDto.operationDate);
-        expect(body.value).toBe(testUpdateDto.value);
+        expect(body.value).toBe(`${testUpdateDto.value}`);
         expect(body.categoryId).toBe(createdCategoryId);
       });
   });

@@ -4,12 +4,12 @@ import { IsDateString, IsEnum, IsNumber, IsString, IsUUID } from 'class-validato
 export class CreateOperationDto {
   @IsString()
   @ApiProperty({
-    description: 'Operation name',
-    example: 'name',
+    description: 'Operation comment',
+    example: 'Food',
     required: true,
     type: String,
   })
-  name: string;
+  comment: string;
 
   @IsUUID()
   @ApiProperty({

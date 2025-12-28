@@ -33,6 +33,22 @@ export class CreateCategoryResponseEntity {
     type: Date,
   })
   updateAt: Date;
+
+  @ApiProperty({
+    description: 'color category in hex',
+    example: '#FF0000',
+    required: true,
+    type: String,
+  })
+  color: string;
+
+  @ApiProperty({
+    description: 'Category icon name',
+    example: 'IconCategory',
+    required: true,
+    type: String,
+  })
+  icon: string;
 }
 
 export class CategoryResponseEntity extends CreateCategoryResponseEntity {

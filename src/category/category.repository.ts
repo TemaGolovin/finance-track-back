@@ -8,10 +8,11 @@ import { getDefaultCategories } from 'src/constants/get-default-categories';
 export class CategoryRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getCategories(userId: string) {
+  async getCategories(userId: string, type?: 'EXPENSE' | 'INCOME') {
     return await this.prisma.category.findMany({
       where: {
         userId: userId,
+        categoryType: type,
       },
     });
   }

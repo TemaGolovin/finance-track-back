@@ -5,6 +5,7 @@ import { UserGroupEntity } from './entities/user-group.entity';
 import { UserGroupRepository } from './user-group.repository';
 import { HttpStatus, NotFoundException } from '@nestjs/common';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
+import { Prisma } from '@prisma/client';
 
 const existedUserGroup: UserGroupEntity = {
   createAt: new Date(),
@@ -80,9 +81,16 @@ describe('UserGroupService', () => {
       startDate: '2025-01-12T20:17:46.384Z',
       endDate: '2025-01-12T20:17:46.384Z',
     });
-    expect(result).toEqual({
+    expect({
+      ...result,
+      byCategories: result.byCategories.map((category) => ({
+        ...category,
+        totalAmount: category.totalAmount.toString(),
+      })),
+      totalSum: result.totalSum.toString(),
+    }).toEqual({
       byCategories: [],
-      totalSum: 0,
+      totalSum: '0',
     });
   });
 
@@ -90,22 +98,22 @@ describe('UserGroupService', () => {
     const userGroupStat: {
       id: string;
       name: string;
-      totalAmount: number;
+      totalAmount: Prisma.Decimal;
     }[] = [
       {
         id: '1',
         name: 'category 1',
-        totalAmount: 100,
+        totalAmount: new Prisma.Decimal(100),
       },
       {
         id: '2',
         name: 'category 2',
-        totalAmount: 400,
+        totalAmount: new Prisma.Decimal(400),
       },
       {
         id: '3',
         name: 'category 3',
-        totalAmount: 500,
+        totalAmount: new Prisma.Decimal(500),
       },
     ];
 
@@ -120,28 +128,36 @@ describe('UserGroupService', () => {
       endDate: '2025-01-12T20:17:46.384Z',
     });
 
-    expect(result).toEqual({
+    expect({
+      ...result,
+      byCategories: result.byCategories.map((category) => ({
+        ...category,
+        totalAmount: category.totalAmount.toString(),
+        proportion: category.proportion.toString(),
+      })),
+      totalSum: result.totalSum.toString(),
+    }).toEqual({
       byCategories: [
         {
           id: '1',
           name: 'category 1',
-          totalAmount: 100,
-          proportion: 10,
+          totalAmount: '100',
+          proportion: '10',
         },
         {
           id: '2',
           name: 'category 2',
-          totalAmount: 400,
-          proportion: 40,
+          totalAmount: '400',
+          proportion: '40',
         },
         {
           id: '3',
           name: 'category 3',
-          totalAmount: 500,
-          proportion: 50,
+          totalAmount: '500',
+          proportion: '50',
         },
       ],
-      totalSum: 1000,
+      totalSum: '1000',
     });
   });
 
