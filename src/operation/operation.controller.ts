@@ -4,6 +4,7 @@ import { CreateOperationDto } from './dto';
 import {
   CreateOperationEntity,
   OperationByDateWithTotalSum,
+  OperationEntity,
   UpdateOperationEntity,
 } from './entity/operation.entity';
 import { ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
@@ -28,6 +29,13 @@ export class OperationController {
       operationType,
       categoryId,
     );
+  }
+
+  @Get('/:id')
+  @ApiOkResponse({ type: OperationEntity })
+  @ApiNotFoundResponse({ type: TemplateErrorResponse })
+  getOperation(@Param('id') id: string) {
+    return this.operationService.getOperationById(id);
   }
 
   @Post()

@@ -58,6 +58,16 @@ export class OperationService {
     };
   }
 
+  async getOperationById(id: string) {
+    const operation = await this.operationRepository.findUniqueById(id);
+
+    if (!operation) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Operation', id));
+    }
+
+    return operation;
+  }
+
   async createOperation(createOperationDto: CreateOperationDto, userId: string) {
     const category = await this.categoryService.findUniqueById(createOperationDto.categoryId);
 

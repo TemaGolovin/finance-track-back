@@ -68,6 +68,15 @@ export class OperationRepository {
   findUniqueById(id: string) {
     return this.prisma.operation.findUnique({
       where: { id },
+      include: {
+        category: {
+          select: {
+            name: true,
+            color: true,
+            icon: true,
+          },
+        },
+      },
     });
   }
 }
