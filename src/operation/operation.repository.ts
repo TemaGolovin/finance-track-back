@@ -11,15 +11,37 @@ export class OperationRepository {
     startDate,
     endDate,
     operationType,
-  }: { userId: string; startDate: string; endDate: string; operationType: 'INCOME' | 'EXPENSE' }) {
+    categoryId,
+  }: {
+    userId: string;
+    startDate: string;
+    endDate: string;
+    operationType: 'INCOME' | 'EXPENSE';
+    categoryId?: string;
+  }) {
     return this.prisma.operation.findMany({
       where: {
         userId,
+        categoryId: {
+          equals: categoryId,
+        },
         operationDate: {
           ...(startDate && { gte: new Date(startDate) }),
           ...(endDate && { lte: new Date(endDate) }),
         },
         type: operationType,
+      },
+      orderBy: {
+        operationDate: 'desc',
+      },
+      include: {
+        category: {
+          select: {
+            name: true,
+            color: true,
+            icon: true,
+          },
+        },
       },
     });
   }

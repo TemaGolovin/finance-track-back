@@ -6,7 +6,10 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { CreateOperationDto } from 'src/operation/dto';
-import { CreateOperationEntity, OperationEntity } from 'src/operation/entity/operation.entity';
+import {
+  CreateOperationEntity,
+  OperationByDateWithTotalSum,
+} from 'src/operation/entity/operation.entity';
 
 const testCreateDto: Omit<CreateOperationDto, 'categoryId'> = {
   comment: 'operation name comment',
@@ -105,12 +108,14 @@ describe('OperationController (e2e)', () => {
     return request(app.getHttpServer())
       .get('/operation')
       .expect(200)
-      .then(({ body }: { body: OperationEntity[] }) => {
-        expect(body.length).toBe(1);
-        expect(body[0].id).toBe(createdOperationId);
-        expect(body[0].comment).toBe(testCreateDto.comment);
-        expect(body[0].operationDate).toBe(testCreateDto.operationDate);
-        expect(body[0].value).toBe(`${testCreateDto.value}`);
+      .then(({ body }: { body: OperationByDateWithTotalSum }) => {
+        expect(body.operationsByDate.length).toBe(1);
+        expect(body.operationsByDate[0].operations[0].id).toBe(createdOperationId);
+        expect(body.operationsByDate[0].operations[0].comment).toBe(testCreateDto.comment);
+        expect(body.operationsByDate[0].operations[0].operationDate).toBe(
+          testCreateDto.operationDate,
+        );
+        expect(body.operationsByDate[0].operations[0].value).toBe(`${testCreateDto.value}`);
       });
   });
 

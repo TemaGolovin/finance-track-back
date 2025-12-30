@@ -3,7 +3,7 @@ import { OperationService } from './operation.service';
 import { CreateOperationDto } from './dto';
 import {
   CreateOperationEntity,
-  OperationEntity,
+  OperationByDateWithTotalSum,
   UpdateOperationEntity,
 } from './entity/operation.entity';
 import { ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse } from '@nestjs/swagger';
@@ -16,12 +16,18 @@ export class OperationController {
   constructor(private readonly operationService: OperationService) {}
 
   @Get()
-  @ApiOkResponse({ type: [OperationEntity] })
+  @ApiOkResponse({ type: OperationByDateWithTotalSum })
   getOperations(
     @UserInfo() userInfo: { email: string; name: string; id: string },
-    @Query() { startDate, endDate, operationType }: GetOperationDto,
+    @Query() { startDate, endDate, operationType, categoryId }: GetOperationDto,
   ) {
-    return this.operationService.getOperations(userInfo.id, startDate, endDate, operationType);
+    return this.operationService.getOperations(
+      userInfo.id,
+      startDate,
+      endDate,
+      operationType,
+      categoryId,
+    );
   }
 
   @Post()

@@ -3,6 +3,7 @@ import { CreateOperationDto } from './dto';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
 import { OperationRepository } from './operation.repository';
 import { CategoryService } from 'src/category/category.service';
+import { Operation, Prisma } from '@prisma/client';
 
 @Injectable()
 export class OperationService {
@@ -10,18 +11,51 @@ export class OperationService {
     private readonly operationRepository: OperationRepository,
     private readonly categoryService: CategoryService,
   ) {}
-  getOperations(
+  async getOperations(
     userId: string,
     startDate: string,
     endDate: string,
     operationType: 'INCOME' | 'EXPENSE',
+    categoryId?: string,
   ) {
-    return this.operationRepository.findManyByUserId({
+    const operations = await this.operationRepository.findManyByUserId({
       userId,
       startDate,
       endDate,
       operationType,
+      categoryId,
     });
+
+    const operationsByDate = Object.values(
+      operations.reduce(
+        (acc, operation) => {
+          const date = new Date(operation.operationDate);
+          const day = date.getDate();
+          const month = date.getMonth() + 1;
+          const year = date.getFullYear();
+          const formattedDate = `${day}.${month}.${year}`;
+
+          if (acc[formattedDate]) {
+            acc[formattedDate].operations.push(operation);
+          } else {
+            acc[formattedDate] = { date: formattedDate, operations: [operation] };
+          }
+
+          return acc;
+        },
+        {} as Record<string, { date: string; operations: Operation[] }>,
+      ),
+    );
+
+    const totalSum = operations.reduce(
+      (acc: Prisma.Decimal, operation) => acc.plus(operation.value),
+      new Prisma.Decimal(0),
+    );
+
+    return {
+      operationsByDate: operationsByDate,
+      totalSum,
+    };
   }
 
   async createOperation(createOperationDto: CreateOperationDto, userId: string) {

@@ -25,7 +25,7 @@ export const createDefaultCategoriesWithOperations = async (
       return {
         categoryId: category.id,
         comment: index % 2 === 0 ? `Operation ${index + 1} ${category.name}` : undefined,
-        type: index % 3 === 0 ? 'INCOME' : 'EXPENSE',
+        type: category.categoryType,
         value: genInteger(10, 10000),
         userId,
         operationDate: new Date(),
