@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Res, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto, RegistrationDto } from './dto/auth.dto';
 import { RegistrationEntity } from './entity/registration.entity';
@@ -119,5 +119,10 @@ export class AuthController {
     return response.status(200).json({
       success: true,
     });
+  }
+
+  @Get('me')
+  async me(@UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string }) {
+    return this.authService.me(userInfo);
   }
 }

@@ -154,6 +154,17 @@ export class AuthService {
     });
   }
 
+  async me(user: { email: string; name: string; id: string; deviceId: string }) {
+    return {
+      success: true,
+      data: {
+        email: user.email,
+        name: user.name,
+        id: user.id,
+      },
+    };
+  }
+
   private async validateUser(email: string, password: string) {
     const user = await this.findUserByEmail(email);
 
