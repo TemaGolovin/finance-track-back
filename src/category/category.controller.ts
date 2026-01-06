@@ -26,6 +26,13 @@ export class CategoryController {
     return this.categoryService.getCategories(userInfo.id, type);
   }
 
+  @Get(':id')
+  @ApiOkResponse({ type: CreateCategoryResponseEntity })
+  @ApiNotFoundResponse({ description: 'Category not found', type: TemplateErrorResponse })
+  getCategory(@Param('id') id: string) {
+    return this.categoryService.findUniqueById(id);
+  }
+
   @Post()
   @ApiCreatedResponse({ type: CreateCategoryResponseEntity })
   @ApiConflictResponse({ description: 'Category already exists', type: TemplateErrorResponse })
