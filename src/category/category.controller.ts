@@ -26,6 +26,20 @@ export class CategoryController {
     return this.categoryService.getCategories(userInfo.id, type);
   }
 
+  @Get('stat')
+  @ApiOkResponse({ type: StatCategoriesEntity })
+  getCategoriesStat(
+    @UserInfo() userInfo: { email: string; name: string; id: string },
+    @Query() { startDate, endDate, operationType }: GetStatCategoriesDto,
+  ) {
+    return this.categoryService.getStatCategories({
+      userId: userInfo.id,
+      startDate,
+      endDate,
+      operationType,
+    });
+  }
+
   @Get(':id')
   @ApiOkResponse({ type: CreateCategoryResponseEntity })
   @ApiNotFoundResponse({ description: 'Category not found', type: TemplateErrorResponse })
@@ -63,19 +77,5 @@ export class CategoryController {
     @UserInfo() userInfo: { email: string; name: string; id: string },
   ) {
     return this.categoryService.deleteCategory(id, userInfo.id);
-  }
-
-  @Get('stat')
-  @ApiOkResponse({ type: StatCategoriesEntity })
-  getCategoriesStat(
-    @UserInfo() userInfo: { email: string; name: string; id: string },
-    @Query() { startDate, endDate, operationType }: GetStatCategoriesDto,
-  ) {
-    return this.categoryService.getStatCategories({
-      userId: userInfo.id,
-      startDate,
-      endDate,
-      operationType,
-    });
   }
 }
