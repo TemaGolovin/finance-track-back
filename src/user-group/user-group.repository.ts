@@ -203,6 +203,8 @@ export class UserGroupRepository {
           data: {
             groupId,
             name: category.name,
+            categoryType: category.categoryType,
+            defaultKey: category.defaultKey,
             personalCategories: {
               create: {
                 categoryId: category.id,

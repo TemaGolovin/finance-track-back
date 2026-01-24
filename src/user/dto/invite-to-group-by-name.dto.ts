@@ -1,16 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsUUID } from 'class-validator';
+import { IsArray, IsString, IsUUID } from 'class-validator';
 
-export class InviteToGroupByNameDto {
-  @IsString()
+export class InviteToGroupByUserIdsDto {
+  @IsArray()
+  @IsString({ each: true })
   @ApiProperty({
-    description: 'user name',
-    example: 'voin123',
+    description: 'user ids',
+    example: ['c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b'],
     required: true,
     type: String,
     uniqueItems: true,
+    isArray: true,
   })
-  name: string;
+  userIds: string[];
 
   @IsUUID()
   @ApiProperty({

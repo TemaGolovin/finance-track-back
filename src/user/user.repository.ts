@@ -56,6 +56,17 @@ export class UserRepository {
     });
   }
 
+  createInvitations(invitation: { groupId: string; recipientId: string[]; senderId: string }) {
+    return this.prisma.invitation.createManyAndReturn({
+      data: invitation.recipientId.map((id) => ({
+        groupId: invitation.groupId,
+        recipientId: id,
+        senderId: invitation.senderId,
+        status: InvitationStatus.PENDING,
+      })),
+    });
+  }
+
   getInventionsByRecipientId(recipientId: string) {
     return this.prisma.invitation.findMany({
       where: {
@@ -103,6 +114,7 @@ export class UserRepository {
       },
       select: {
         name: true,
+        id: true,
       },
     });
   }

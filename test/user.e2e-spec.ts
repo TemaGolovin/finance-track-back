@@ -154,16 +154,16 @@ describe('UserController (e2e)', () => {
       });
   });
 
-  it('/user/invitation/by-name (POST), - invite user by name - success', async () => {
+  it('/user/invitation (POST), - invite user by name - success', async () => {
     return request(app.getHttpServer())
-      .post('/user/invitation/by-name')
-      .send({ name: userForFind.name, groupId })
+      .post('/user/invitation')
+      .send({ userIds: [userForFind.id], groupId })
       .expect(201)
       .then(({ body }) => {
         expect(body).toBeDefined();
-        expect(body.id).toBeDefined();
-        invitationId = body.id;
-        expect(body.status).toBe(InvitationStatus.PENDING);
+        expect(body[0].id).toBeDefined();
+        invitationId = body[0].id;
+        expect(body[0].status).toBe(InvitationStatus.PENDING);
       });
   });
 

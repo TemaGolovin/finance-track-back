@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UserRepository } from './user.repository';
-import { InviteToGroupByNameDto } from './dto/invite-to-group-by-name.dto';
+import { InviteToGroupByUserIdsDto } from './dto/invite-to-group-by-name.dto';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
 import { UpdateInvitationDto } from './dto/update-invitation.dto';
 import { InvitationStatus } from '@prisma/client';
@@ -22,15 +22,15 @@ export class UserService {
     return await this.userRepository.findUsersByUsername(username, userId);
   }
 
-  async inviteToGroupByName(inviteByNameDto: InviteToGroupByNameDto, senderId: string) {
-    const { name, groupId } = inviteByNameDto;
-    const user = await this.userRepository.findUserByUsername(name);
+  async inviteToGroupByName(inviteByNameDto: InviteToGroupByUserIdsDto, senderId: string) {
+    const { userIds, groupId } = inviteByNameDto;
+    const findUsers = await this.userRepository.findUsersByIds(userIds);
 
-    if (!user) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('user', name, 'name'));
+    if (findUsers.length !== userIds.length) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('users', 'some users', 'ids'));
     }
 
-    if (user.id === senderId) {
+    if (findUsers.some((user) => user.id === senderId)) {
       throw new ConflictException(USER_ERRORS.SELF_INVITATION);
     }
 
@@ -40,17 +40,17 @@ export class UserService {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('group', groupId, 'id'));
     }
 
-    if (targetUserGroup.creatorId === user.id) {
+    if (targetUserGroup.creatorId !== senderId) {
       throw new ForbiddenException(USER_ERRORS.FORBIDDEN_INVITATION_THIS_GROUP);
     }
 
-    const invitation = await this.userRepository.createInvitation({
+    const invitations = await this.userRepository.createInvitations({
       groupId,
-      recipientId: user.id,
+      recipientId: userIds,
       senderId,
     });
 
-    return invitation;
+    return invitations;
   }
 
   async getInvitations(userId: string) {

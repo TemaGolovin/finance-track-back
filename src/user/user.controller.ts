@@ -8,7 +8,7 @@ import {
   ApiQuery,
   ApiResponse,
 } from '@nestjs/swagger';
-import { InviteToGroupByNameDto } from './dto/invite-to-group-by-name.dto';
+import { InviteToGroupByUserIdsDto } from './dto/invite-to-group-by-name.dto';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
 import { InvitationEntity } from './entity/invitation.entity';
 import { UpdateInvitationDto } from './dto/update-invitation.dto';
@@ -36,8 +36,12 @@ export class UserController {
     return this.userService.findUsersByUsername(name, userInfo.id);
   }
 
-  @Post('invitation/by-name')
-  @ApiCreatedResponse({ type: InvitationEntity, description: 'invitation created successfully' })
+  @Post('invitation')
+  @ApiCreatedResponse({
+    type: InvitationEntity,
+    description: 'invitation created successfully',
+    isArray: true,
+  })
   @ApiForbiddenResponse({
     description: "when user can't invite to this group",
     type: TemplateErrorResponse,
@@ -53,7 +57,7 @@ export class UserController {
     example: { message: USER_ERRORS.SELF_INVITATION, statusCode: 409, error: 'Conflict' },
   })
   inviteToGroupByName(
-    @Body() inviteByNameDto: InviteToGroupByNameDto,
+    @Body() inviteByNameDto: InviteToGroupByUserIdsDto,
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
     return this.userService.inviteToGroupByName(inviteByNameDto, userInfo.id);
