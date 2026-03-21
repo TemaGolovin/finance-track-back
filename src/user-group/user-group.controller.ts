@@ -4,12 +4,14 @@ import { CreateUserGroupDto } from './dto/create-user-group.dto';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
 import {
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiResponse,
 } from '@nestjs/swagger';
 import { UserGroupEntity } from './entities/user-group.entity';
 import { USER_GROUP_MESSAGES } from './common/messages';
+import { USER_GROUP_ERRORS } from './common/errors';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
 import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
 import { ConnectGroupCategoryDto } from './dto/connect-group-category.dto';
@@ -108,6 +110,46 @@ export class UserGroupController {
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
     return this.userGroupService.remove(id, userInfo.id);
+  }
+
+  @ApiResponse({
+    status: 200,
+    example: { count: 1 },
+  })
+  @ApiNotFoundResponse({
+    example: {
+      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID', 'id'),
+      statusCode: 404,
+      error: 'Not Found',
+    },
+  })
+  @ApiForbiddenResponse({
+    examples: {
+      notCreator: {
+        summary: 'Requester is not the group creator',
+        value: {
+          message: USER_GROUP_ERRORS.FORBIDDEN_REMOVE_MEMBER(),
+          statusCode: 403,
+          error: 'Forbidden',
+        },
+      },
+      removeCreator: {
+        summary: 'Attempt to remove the group creator',
+        value: {
+          message: USER_GROUP_ERRORS.CANNOT_REMOVE_CREATOR(),
+          statusCode: 403,
+          error: 'Forbidden',
+        },
+      },
+    },
+  })
+  @Delete(':groupId/members/:memberId')
+  removeMember(
+    @Param('groupId') groupId: string,
+    @Param('memberId') memberId: string,
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+  ) {
+    return this.userGroupService.removeMember(groupId, memberId, userInfo.id);
   }
 
   @Patch(':groupId/category/connect')

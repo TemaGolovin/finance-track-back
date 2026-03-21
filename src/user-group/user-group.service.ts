@@ -112,6 +112,24 @@ export class UserGroupService {
     };
   }
 
+  async removeMember(groupId: string, memberId: string, requesterId: string) {
+    const group = await this.userGroupRepository.getUserGroupById(groupId, requesterId);
+
+    if (!group) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+    }
+
+    if (group.creatorId !== requesterId) {
+      throw new ForbiddenException(USER_GROUP_ERRORS.FORBIDDEN_REMOVE_MEMBER);
+    }
+
+    if (memberId === group.creatorId) {
+      throw new ForbiddenException(USER_GROUP_ERRORS.CANNOT_REMOVE_CREATOR);
+    }
+
+    return await this.userGroupRepository.removeUserFromGroup(memberId, groupId);
+  }
+
   async remove(id: string, userId: string) {
     const groupForDelete = await this.userGroupRepository.getUserGroupById(id, userId);
 

@@ -60,16 +60,10 @@ export class UserGroupRepository {
   }
 
   async removeUserFromGroup(userId: string, groupId: string) {
-    return await this.prisma.userRelationGroup.update({
+    return await this.prisma.userRelationGroupUser.deleteMany({
       where: {
-        id: groupId,
-      },
-      data: {
-        users: {
-          disconnect: {
-            id: userId,
-          },
-        },
+        userId,
+        userRelationGroupId: groupId,
       },
     });
   }
