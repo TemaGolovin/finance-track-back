@@ -106,10 +106,17 @@ export class UserGroupRepository {
     });
   }
 
-  async getUserGroupById(groupId: string) {
+  async getUserGroupById(groupId: string, userId: string) {
     return await this.prisma.userRelationGroup.findUnique({
       where: {
         id: groupId,
+        users: {
+          some: {
+            user: {
+              id: userId,
+            },
+          },
+        },
       },
       include: {
         users: {
@@ -118,6 +125,7 @@ export class UserGroupRepository {
               select: {
                 name: true,
                 id: true,
+                receivedInvitations: true,
               },
             },
           },
@@ -244,6 +252,22 @@ export class UserGroupRepository {
       });
 
       return await Promise.all(groupCategoriesPromises);
+    });
+  }
+
+  async getGroupInvitations(groupId: string) {
+    return await this.prisma.invitation.findMany({
+      where: {
+        groupId,
+      },
+      include: {
+        recipient: {
+          select: {
+            name: true,
+            id: true,
+          },
+        },
+      },
     });
   }
 }

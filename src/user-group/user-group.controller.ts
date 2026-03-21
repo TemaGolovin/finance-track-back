@@ -13,6 +13,7 @@ import { USER_GROUP_MESSAGES } from './common/messages';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
 import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
 import { ConnectGroupCategoryDto } from './dto/connect-group-category.dto';
+import { InvitationEntity } from 'src/user/entity/invitation.entity';
 
 @Controller('user-group')
 export class UserGroupController {
@@ -146,5 +147,41 @@ export class UserGroupController {
       groupId,
       userInfo.id,
     );
+  }
+
+  @Get(':id/invitations')
+  @ApiResponse({
+    type: [InvitationEntity],
+    isArray: true,
+    example: [
+      {
+        id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+        groupId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+        senderId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+        recipientId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+        status: 'PENDING',
+        createdAt: '2023-01-01T00:00:00.000Z',
+        updatedAt: '2023-01-01T00:00:00.000Z',
+        recipient: [
+          {
+            id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+            name: 'username',
+          },
+        ],
+      },
+    ],
+  })
+  @ApiNotFoundResponse({
+    example: {
+      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID'),
+      statusCode: 404,
+      error: 'Not Found',
+    },
+  })
+  async getGroupInvitations(
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+    @Param('id') groupId: string,
+  ) {
+    return await this.userGroupService.getGroupInvitations(userInfo.id, groupId);
   }
 }

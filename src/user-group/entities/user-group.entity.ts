@@ -1,11 +1,27 @@
-import { ApiProperty, OmitType } from '@nestjs/swagger';
+import { ApiProperty, IntersectionType, OmitType } from '@nestjs/swagger';
+import { InvitationStatus as InvitationStatusEnum } from '@prisma/client';
 import { UserEntity } from 'src/user/entity/user.entity';
+
+class InvitationStatus {
+  @ApiProperty({
+    example: 'PENDING',
+    required: true,
+    enum: InvitationStatusEnum,
+    description: 'invitation status',
+  })
+  status: InvitationStatusEnum;
+}
 
 class UserGroupUserEntity {
   @ApiProperty({
-    type: OmitType(UserEntity, ['createAt', 'updateAt', 'email'] as const),
+    type: IntersectionType(
+      OmitType(UserEntity, ['createAt', 'updateAt', 'email'] as const),
+      InvitationStatus,
+    ),
   })
-  user: Omit<UserEntity, 'createAt' | 'updateAt' | 'email'>;
+  user: Omit<UserEntity, 'createAt' | 'updateAt' | 'email'> & {
+    InvitationStatus: InvitationStatus;
+  };
 }
 
 export class UserGroupEntity {

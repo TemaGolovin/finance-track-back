@@ -34,7 +34,7 @@ export class UserGroupService {
   }
 
   async findOne(groupId: string, userId: string) {
-    const group = await this.userGroupRepository.getUserGroupById(groupId);
+    const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
 
     if (!group) {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
@@ -46,11 +46,27 @@ export class UserGroupService {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
     }
 
-    return group;
+    const usersWithStatusInvitation = group.users.map(({ user }) => {
+      const currentInvitation = user.receivedInvitations.find(
+        (invitation) => invitation.groupId === groupId,
+      );
+
+      const { receivedInvitations, ...userWithoutInvitations } = user;
+
+      return {
+        ...userWithoutInvitations,
+        status: currentInvitation?.status,
+      };
+    });
+
+    return {
+      ...group,
+      users: usersWithStatusInvitation,
+    };
   }
 
-  async getUserGroupById(id: string) {
-    return await this.userGroupRepository.getUserGroupById(id);
+  async getUserGroupById(id: string, userId: string) {
+    return await this.userGroupRepository.getUserGroupById(id, userId);
   }
 
   async addToGroup(userId: string, groupId: string) {
@@ -66,7 +82,7 @@ export class UserGroupService {
     userId,
     operationType,
   }: { groupId: string; userId: string } & GetUserGroupStatDto) {
-    const group = await this.userGroupRepository.getUserGroupById(groupId);
+    const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
 
     if (!group) {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
@@ -97,7 +113,7 @@ export class UserGroupService {
   }
 
   async remove(id: string, userId: string) {
-    const groupForDelete = await this.userGroupRepository.getUserGroupById(id);
+    const groupForDelete = await this.userGroupRepository.getUserGroupById(id, userId);
 
     if (!groupForDelete) {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', id));
@@ -126,7 +142,7 @@ export class UserGroupService {
     groupId: string,
     userId: string,
   ) {
-    const group = await this.userGroupRepository.getUserGroupById(groupId);
+    const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
 
     if (!group) {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
@@ -142,5 +158,15 @@ export class UserGroupService {
       groupCategoryDto.relatedCategories,
       userId,
     );
+  }
+
+  async getGroupInvitations(userId: string, groupId: string) {
+    const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
+
+    if (!group) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+    }
+
+    return await this.userGroupRepository.getGroupInvitations(groupId);
   }
 }

@@ -34,7 +34,7 @@ export class UserService {
       throw new ConflictException(USER_ERRORS.SELF_INVITATION);
     }
 
-    const targetUserGroup = await this.userGroupService.getUserGroupById(groupId);
+    const targetUserGroup = await this.userGroupService.getUserGroupById(groupId, senderId);
 
     if (!targetUserGroup) {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('group', groupId, 'id'));
