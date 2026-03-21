@@ -33,7 +33,7 @@ export class OperationService {
           const day = date.getDate();
           const month = date.getMonth() + 1;
           const year = date.getFullYear();
-          const formattedDate = `${day}.${month}.${year}`;
+          const formattedDate = `${day.toString().padStart(2, '0')}.${month.toString().padStart(2, '0')}.${year}`;
 
           if (acc[formattedDate]) {
             acc[formattedDate].operations.push(operation);
