@@ -78,6 +78,11 @@ export class UserRepository {
             name: true,
           },
         },
+        group: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
   }
@@ -89,6 +94,11 @@ export class UserRepository {
       },
       include: {
         recipient: {
+          select: {
+            name: true,
+          },
+        },
+        group: {
           select: {
             name: true,
           },
