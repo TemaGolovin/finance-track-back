@@ -178,6 +178,30 @@ export class UserGroupService {
     );
   }
 
+  async getGroupCategories(groupId: string, userId: string) {
+    const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
+
+    if (!group) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+    }
+
+    const userMemberInGroup = group.users.find((user) => user.user.id === userId);
+
+    if (!userMemberInGroup) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+    }
+
+    const categories = await this.userGroupRepository.getGroupCategories(groupId, userId);
+
+    return categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      categoryType: cat.categoryType,
+      defaultKey: cat.defaultKey,
+      connectedPersonalCategoryId: cat.personalCategories[0]?.categoryId ?? null,
+    }));
+  }
+
   async getGroupInvitations(userId: string, groupId: string) {
     const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
 

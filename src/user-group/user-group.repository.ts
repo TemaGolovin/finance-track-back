@@ -249,6 +249,13 @@ export class UserGroupRepository {
     });
   }
 
+  async getGroupCategories(groupId: string, userId: string) {
+    return this.prisma.groupCategory.findMany({
+      where: { groupId },
+      include: { personalCategories: { where: { userId } } },
+    });
+  }
+
   async getGroupInvitations(groupId: string) {
     return await this.prisma.invitation.findMany({
       where: {

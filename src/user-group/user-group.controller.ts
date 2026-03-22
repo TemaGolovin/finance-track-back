@@ -191,9 +191,34 @@ export class UserGroupController {
     );
   }
 
+  @Get(':groupId/categories')
+  @ApiOkResponse({
+    example: [
+      {
+        id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+        name: 'Food',
+        categoryType: 'EXPENSE',
+        defaultKey: 'food',
+        connectedPersonalCategoryId: 'd8f4e185-fa72-4ead-97d3-2818ad965e6d',
+      },
+    ],
+  })
+  @ApiNotFoundResponse({
+    example: {
+      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID', 'id'),
+      statusCode: 404,
+      error: 'Not Found',
+    },
+  })
+  getGroupCategories(
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+    @Param('groupId') groupId: string,
+  ) {
+    return this.userGroupService.getGroupCategories(groupId, userInfo.id);
+  }
+
   @Get(':id/invitations')
-  @ApiResponse({
-    type: [InvitationEntity],
+  @ApiResponse({    type: [InvitationEntity],
     isArray: true,
     example: [
       {
