@@ -61,7 +61,9 @@ export class UserGroupService {
 
     return {
       ...group,
-      users: usersWithStatusInvitation,
+      users: usersWithStatusInvitation.map((user) => ({
+        user: user,
+      })),
     };
   }
 
