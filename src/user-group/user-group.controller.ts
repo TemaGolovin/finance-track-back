@@ -94,6 +94,57 @@ export class UserGroupController {
     });
   }
 
+  @Get(':groupId/operations')
+  @ApiOkResponse({
+    example: {
+      totalSum: 21342,
+      operationsByDate: [
+        {
+          date: '21.12.2023',
+          operations: [
+            {
+              id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+              comment: 'Food',
+              value: 100,
+              type: 'INCOME',
+              categoryId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+              operationDate: '2023-01-01T00:00:00.000Z',
+              createAt: '2023-01-01T00:00:00.000Z',
+              updateAt: '2023-01-01T00:00:00.000Z',
+              userId: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
+              category: {
+                name: 'Food',
+                color: '#FF0000',
+                icon: 'CategoryIcon',
+              },
+            },
+          ],
+        },
+      ],
+    },
+  })
+  @ApiNotFoundResponse({
+    example: {
+      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID', 'id'),
+      statusCode: 404,
+      error: 'Not Found',
+    },
+  })
+  async getOperations(
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+    @Param('groupId') groupId: string,
+    @Query() { startDate, endDate, operationType, categoryId }: GetUserGroupStatDto & { categoryId?: string },
+  ) {
+    return await this.userGroupService.getUserGroupOperations({
+      groupId,
+      userId: userInfo.id,
+      startDate,
+      endDate,
+      operationType,
+      categoryId,
+    });
+  }
+
   @ApiResponse({
     status: 200,
     example: {

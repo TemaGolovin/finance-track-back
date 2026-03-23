@@ -241,6 +241,57 @@ export class UserGroupRepository {
     });
   }
 
+  async getUserGroupOperations(
+    groupId: string,
+    categoryType?: OperationType,
+    startDate?: string,
+    endDate?: string,
+    categoryId?: string,
+  ) {
+    const operationDateFilter: Record<string, Date> = {};
+
+    if (startDate) {
+      operationDateFilter.gte = new Date(startDate);
+    }
+
+    if (endDate) {
+      operationDateFilter.lte = new Date(endDate);
+    }
+
+    return this.prisma.operation.findMany({
+      where: {
+        category: {
+          groupsMapping: {
+            some: {
+              groupCategory: {
+                groupId,
+              },
+            },
+          },
+        },
+        type: categoryType,
+        ...(Object.keys(operationDateFilter).length > 0 && {
+          operationDate: operationDateFilter,
+        }),
+        ...(categoryId && {
+          categoryId,
+        }),
+      },
+      orderBy: {
+        operationDate: 'desc',
+      },
+      include: {
+        category: {
+          select: {
+            name: true,
+            color: true,
+            icon: true,
+          },
+        },
+      },
+    });
+  }
+
   async connectGroupCategoriesToPersonalCategories(
     relatedCategories: { personalCategoryId: string; groupCategoryId: string }[],
     userId: string,

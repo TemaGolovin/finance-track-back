@@ -125,6 +125,66 @@ export class UserGroupService {
     };
   }
 
+  async getUserGroupOperations({
+    groupId,
+    userId,
+    operationType,
+    startDate,
+    endDate,
+    categoryId,
+  }: { groupId: string; userId: string; categoryId?: string } & GetUserGroupStatDto) {
+    const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
+
+    if (!group) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+    }
+
+    const userMemberInGroup = group.users.find((user) => user.user.id === userId);
+
+    if (!userMemberInGroup) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+    }
+
+    const operations = await this.userGroupRepository.getUserGroupOperations(
+      groupId,
+      operationType,
+      startDate,
+      endDate,
+      categoryId,
+    );
+
+    const operationsByDate = Object.values(
+      operations.reduce(
+        (acc, operation) => {
+          const date = new Date(operation.operationDate);
+          const day = date.getDate();
+          const month = date.getMonth() + 1;
+          const year = date.getFullYear();
+          const formattedDate = `${day.toString().padStart(2, '0')}.${month.toString().padStart(2, '0')}.${year}`;
+
+          if (acc[formattedDate]) {
+            acc[formattedDate].operations.push(operation);
+          } else {
+            acc[formattedDate] = { date: formattedDate, operations: [operation] };
+          }
+
+          return acc;
+        },
+        {} as Record<string, { date: string; operations: typeof operations }>,
+      ),
+    );
+
+    const totalSum = operations.reduce(
+      (acc: Prisma.Decimal, operation) => acc.plus(operation.value),
+      new Prisma.Decimal(0),
+    );
+
+    return {
+      operationsByDate,
+      totalSum,
+    };
+  }
+
   async removeMember(groupId: string, memberId: string, requesterId: string) {
     const group = await this.userGroupRepository.getUserGroupById(groupId, requesterId);
 
