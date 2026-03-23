@@ -258,25 +258,45 @@ export class UserGroupRepository {
       operationDateFilter.lte = new Date(endDate);
     }
 
-    return this.prisma.operation.findMany({
-      where: {
-        category: {
-          groupsMapping: {
-            some: {
-              groupCategory: {
-                groupId,
-              },
+    // If categoryId is provided, we need to check if it's a groupCategoryId
+    // Get all personal category IDs mapped to this groupCategoryId
+    let personalCategoryIds: string[] = [];
+    if (categoryId) {
+      const mappedCategories = await this.prisma.personalCategoryMap.findMany({
+        where: {
+          groupCategoryId: categoryId,
+        },
+        select: {
+          categoryId: true,
+        },
+      });
+
+      personalCategoryIds = mappedCategories.map((m) => m.categoryId);
+    }
+
+    const whereClause: Prisma.OperationWhereInput = {
+      category: {
+        groupsMapping: {
+          some: {
+            groupCategory: {
+              groupId,
             },
           },
         },
-        type: categoryType,
-        ...(Object.keys(operationDateFilter).length > 0 && {
-          operationDate: operationDateFilter,
-        }),
-        ...(categoryId && {
-          categoryId,
-        }),
       },
+      type: categoryType,
+      ...(Object.keys(operationDateFilter).length > 0 && {
+        operationDate: operationDateFilter,
+      }),
+      ...(personalCategoryIds.length > 0 && {
+        categoryId: {
+          in: personalCategoryIds,
+        },
+      }),
+    };
+
+    return this.prisma.operation.findMany({
+      where: whereClause,
       orderBy: {
         operationDate: 'desc',
       },
