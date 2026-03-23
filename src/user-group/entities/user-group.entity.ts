@@ -20,7 +20,7 @@ class UserGroupUserEntity {
     ),
   })
   user: Omit<UserEntity, 'createAt' | 'updateAt' | 'email'> & {
-    InvitationStatus: InvitationStatus;
+    status?: InvitationStatusEnum;
   };
 }
 

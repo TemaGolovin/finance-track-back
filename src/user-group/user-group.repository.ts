@@ -134,7 +134,22 @@ export class UserGroupRepository {
     });
   }
 
-  async getUserGroupStat(groupId: string, categoryType?: OperationType) {
+  async getUserGroupStat(
+    groupId: string,
+    categoryType?: OperationType,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const operationDateFilter: Record<string, Date> = {};
+
+    if (startDate) {
+      operationDateFilter.gte = new Date(startDate);
+    }
+
+    if (endDate) {
+      operationDateFilter.lte = new Date(endDate);
+    }
+
     return this.prisma.groupCategory
       .findMany({
         where: { groupId, categoryType },
@@ -144,6 +159,11 @@ export class UserGroupRepository {
               personalCategory: {
                 include: {
                   operations: {
+                    where: {
+                      ...(Object.keys(operationDateFilter).length > 0 && {
+                        operationDate: operationDateFilter,
+                      }),
+                    },
                     select: {
                       value: true,
                     },

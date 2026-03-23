@@ -22,12 +22,14 @@ const existedUserGroup: UserGroupEntity = {
       user: {
         id: '1',
         name: 'test user',
+        status: 'ACCEPTED',
       },
     },
     {
       user: {
         id: '2',
         name: 'creator test',
+        status: 'ACCEPTED',
       },
     },
   ],

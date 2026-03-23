@@ -81,6 +81,8 @@ export class UserGroupService {
     groupId,
     userId,
     operationType,
+    startDate,
+    endDate,
   }: { groupId: string; userId: string } & GetUserGroupStatDto) {
     const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
 
@@ -94,16 +96,27 @@ export class UserGroupService {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
     }
 
-    const byCategories = await this.userGroupRepository.getUserGroupStat(groupId, operationType);
+    const byCategories = await this.userGroupRepository.getUserGroupStat(
+      groupId,
+      operationType,
+      startDate,
+      endDate,
+    );
 
-    const totalSum = byCategories.reduce(
+    const filteredCategories = byCategories.filter((category) =>
+      category.totalAmount.gt(new Prisma.Decimal(0)),
+    );
+
+    const totalSum = filteredCategories.reduce(
       (acc: Prisma.Decimal, category) => acc.plus(category.totalAmount),
       new Prisma.Decimal(0),
     );
 
-    const byCategoriesWithProportion = byCategories.map((category) => ({
+    const byCategoriesWithProportion = filteredCategories.map((category) => ({
       ...category,
-      proportion: category.totalAmount.div(totalSum).mul(new Prisma.Decimal(100)),
+      proportion: totalSum.gt(0)
+        ? category.totalAmount.div(totalSum).mul(new Prisma.Decimal(100))
+        : new Prisma.Decimal(0),
     }));
 
     return {
