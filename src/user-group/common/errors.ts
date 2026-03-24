@@ -5,4 +5,8 @@ export const USER_GROUP_ERRORS = {
   CANNOT_REMOVE_CREATOR: () => 'Cannot remove the group creator',
   FORBIDDEN_MANAGE_CATEGORIES: () => 'Only the group creator can manage group categories',
   GROUP_CATEGORY_NOT_FOUND: (id: string) => `Group category with id ${id} not found`,
+  DUPLICATE_PERSONAL_CATEGORY_IN_CONNECT: () =>
+    'Each personal category can only be linked to one group category in this group',
+  GROUP_CATEGORY_NOT_IN_GROUP: () => 'Group category does not belong to this group',
+  PERSONAL_CATEGORY_NOT_OWNED: () => 'Personal category does not belong to the user',
 };

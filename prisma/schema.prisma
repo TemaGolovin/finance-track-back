@@ -41,6 +41,7 @@ model UserRelationGroup {
   creator         User            @relation(fields: [creatorId], references: [id])
   creatorId       String
   userGroupCategory GroupCategory[]
+  personalCategoryMaps PersonalCategoryMap[]
 }
 
 model UserRelationGroupUser {
@@ -64,15 +65,18 @@ model GroupCategory {
 }
 
 model PersonalCategoryMap {
-  id                String        @id @default(uuid())
-  groupCategory     GroupCategory @relation(fields: [groupCategoryId], references: [id], onDelete: Cascade)
-  personalCategory  Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  id                String            @id @default(uuid())
+  groupCategory     GroupCategory     @relation(fields: [groupCategoryId], references: [id], onDelete: Cascade)
+  personalCategory  Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   groupCategoryId   String
   categoryId        String
-  user              User          @relation(fields: [userId], references: [id])
+  user              User              @relation(fields: [userId], references: [id])
   userId            String
+  userRelationGroup UserRelationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId           String
 
   @@unique([groupCategoryId, userId])
+  @@unique([groupId, categoryId, userId])
 }
 
 

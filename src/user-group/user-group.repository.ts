@@ -233,6 +233,7 @@ export class UserGroupRepository {
               create: {
                 categoryId: category.id,
                 userId: category.userId,
+                groupId,
               },
             },
           },
@@ -315,11 +316,36 @@ export class UserGroupRepository {
   }
 
   async connectGroupCategoriesToPersonalCategories(
-    relatedCategories: { personalCategoryId: string; groupCategoryId: string }[],
+    relatedCategories: { personalCategoryId: string | null; groupCategoryId: string }[],
     userId: string,
+    groupId: string,
   ) {
+    const disconnects = relatedCategories.filter((r) => !r.personalCategoryId);
+    const connects = relatedCategories.filter((r) => r.personalCategoryId);
+
+    const personalIdsInPayload = [...new Set(connects.map((r) => r.personalCategoryId!))];
+
     return this.prisma.$transaction(async (tx) => {
-      const groupCategoriesPromises = relatedCategories.map((category) => {
+      if (disconnects.length > 0) {
+        await tx.personalCategoryMap.deleteMany({
+          where: {
+            userId,
+            groupCategoryId: { in: disconnects.map((d) => d.groupCategoryId) },
+          },
+        });
+      }
+
+      if (personalIdsInPayload.length > 0) {
+        await tx.personalCategoryMap.deleteMany({
+          where: {
+            userId,
+            groupId,
+            categoryId: { in: personalIdsInPayload },
+          },
+        });
+      }
+
+      const groupCategoriesPromises = connects.map((category) => {
         return tx.groupCategory.update({
           where: {
             id: category.groupCategoryId,
@@ -335,10 +361,12 @@ export class UserGroupRepository {
                 },
                 create: {
                   userId,
-                  categoryId: category.personalCategoryId,
+                  categoryId: category.personalCategoryId!,
+                  groupId,
                 },
                 update: {
-                  categoryId: category.personalCategoryId,
+                  categoryId: category.personalCategoryId!,
+                  groupId,
                 },
               },
             },
@@ -357,6 +385,18 @@ export class UserGroupRepository {
     return this.prisma.groupCategory.findMany({
       where: { groupId },
       include: { personalCategories: { where: { userId } } },
+    });
+  }
+
+  async countGroupCategoriesInGroup(groupId: string, groupCategoryIds: string[]) {
+    if (groupCategoryIds.length === 0) {
+      return 0;
+    }
+    return this.prisma.groupCategory.count({
+      where: {
+        groupId,
+        id: { in: groupCategoryIds },
+      },
     });
   }
 

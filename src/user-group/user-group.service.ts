@@ -1,4 +1,9 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
 import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
 import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
@@ -249,9 +254,36 @@ export class UserGroupService {
       throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
     }
 
+    const { relatedCategories } = groupCategoryDto;
+    const connectPersonalIds = relatedCategories
+      .map((r) => r.personalCategoryId)
+      .filter((id): id is string => id != null);
+
+    if (new Set(connectPersonalIds).size !== connectPersonalIds.length) {
+      throw new BadRequestException(USER_GROUP_ERRORS.DUPLICATE_PERSONAL_CATEGORY_IN_CONNECT());
+    }
+
+    const groupCategoryIds = [...new Set(relatedCategories.map((r) => r.groupCategoryId))];
+    const categoriesInGroupCount = await this.userGroupRepository.countGroupCategoriesInGroup(
+      groupId,
+      groupCategoryIds,
+    );
+    if (categoriesInGroupCount !== groupCategoryIds.length) {
+      throw new BadRequestException(USER_GROUP_ERRORS.GROUP_CATEGORY_NOT_IN_GROUP());
+    }
+
+    const userCategories = await this.categoryService.getCategories(userId);
+    const ownedCategoryIds = new Set(userCategories.map((c) => c.id));
+    for (const personalCategoryId of new Set(connectPersonalIds)) {
+      if (!ownedCategoryIds.has(personalCategoryId)) {
+        throw new BadRequestException(USER_GROUP_ERRORS.PERSONAL_CATEGORY_NOT_OWNED());
+      }
+    }
+
     return this.userGroupRepository.connectGroupCategoriesToPersonalCategories(
-      groupCategoryDto.relatedCategories,
+      relatedCategories,
       userId,
+      groupId,
     );
   }
 

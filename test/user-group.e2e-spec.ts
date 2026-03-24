@@ -160,7 +160,7 @@ describe('UserGroupController (e2e)', () => {
         expect(body.byCategories).toBeDefined();
         expect(body.totalSum).toBe('100');
 
-        expect(body.byCategories.length).toBe(2);
+        expect(body.byCategories.length).toBe(1);
       });
   });
 

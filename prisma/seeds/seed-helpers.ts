@@ -84,6 +84,7 @@ export const createUserGroupCategories = async (
             create: {
               categoryId: category.id,
               userId: category.userId,
+              groupId,
             },
           },
         },
@@ -129,6 +130,7 @@ export const mapCategoryToGroup = async (
   prisma: PrismaClient,
   relatedCategoriesIds: { groupCategoryId: string; categoryId: string }[],
   userId: string,
+  groupId: string,
 ) => {
   return await prisma.$transaction(async (tx) => {
     const groupCategoriesPromises = relatedCategoriesIds.map((category) => {
@@ -141,6 +143,7 @@ export const mapCategoryToGroup = async (
             create: {
               categoryId: category.categoryId,
               userId,
+              groupId,
             },
           },
         },
@@ -183,7 +186,7 @@ export const createUsersWithCategoriesAndJoinToGroup = async (prisma: PrismaClie
 
   await addUserToGroup(prisma, secondUser.id, group.id);
 
-  await mapCategoryToGroup(prisma, mappedCategoriesIds, secondUser.id);
+  await mapCategoryToGroup(prisma, mappedCategoriesIds, secondUser.id, group.id);
 
   return { firstUser, secondUser, group };
 };
