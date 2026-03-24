@@ -72,7 +72,7 @@ model PersonalCategoryMap {
   user              User          @relation(fields: [userId], references: [id])
   userId            String
 
-  @@unique([groupCategoryId, categoryId, userId])
+  @@unique([groupCategoryId, userId])
 }
 
 

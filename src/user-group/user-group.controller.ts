@@ -1,6 +1,8 @@
 import { Controller, Get, Post, Body, Param, Delete, Query, Patch } from '@nestjs/common';
 import { UserGroupService } from './user-group.service';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
+import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
+import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
 import {
   ApiCreatedResponse,
@@ -266,6 +268,64 @@ export class UserGroupController {
     @Param('groupId') groupId: string,
   ) {
     return this.userGroupService.getGroupCategories(groupId, userInfo.id);
+  }
+
+  @Post(':groupId/categories')
+  @ApiCreatedResponse({
+    example: { id: 'uuid', name: 'Food', categoryType: 'EXPENSE', defaultKey: null },
+  })
+  @ApiForbiddenResponse({
+    example: {
+      message: USER_GROUP_ERRORS.FORBIDDEN_MANAGE_CATEGORIES(),
+      statusCode: 403,
+      error: 'Forbidden',
+    },
+  })
+  createGroupCategory(
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+    @Param('groupId') groupId: string,
+    @Body() dto: CreateGroupCategoryDto,
+  ) {
+    return this.userGroupService.createGroupCategory(groupId, dto, userInfo.id);
+  }
+
+  @Patch(':groupId/categories/:categoryId')
+  @ApiOkResponse({
+    example: { id: 'uuid', name: 'Food', categoryType: 'EXPENSE', defaultKey: null },
+  })
+  @ApiForbiddenResponse({
+    example: {
+      message: USER_GROUP_ERRORS.FORBIDDEN_MANAGE_CATEGORIES(),
+      statusCode: 403,
+      error: 'Forbidden',
+    },
+  })
+  updateGroupCategory(
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+    @Param('groupId') groupId: string,
+    @Param('categoryId') categoryId: string,
+    @Body() dto: UpdateGroupCategoryDto,
+  ) {
+    return this.userGroupService.updateGroupCategory(groupId, categoryId, dto, userInfo.id);
+  }
+
+  @Delete(':groupId/categories/:categoryId')
+  @ApiOkResponse({
+    example: { id: 'uuid', name: 'Food' },
+  })
+  @ApiForbiddenResponse({
+    example: {
+      message: USER_GROUP_ERRORS.FORBIDDEN_MANAGE_CATEGORIES(),
+      statusCode: 403,
+      error: 'Forbidden',
+    },
+  })
+  deleteGroupCategory(
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+    @Param('groupId') groupId: string,
+    @Param('categoryId') categoryId: string,
+  ) {
+    return this.userGroupService.deleteGroupCategory(groupId, categoryId, userInfo.id);
   }
 
   @Get(':id/invitations')

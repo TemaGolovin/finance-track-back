@@ -1,5 +1,7 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
+import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
+import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
 import { UserGroupRepository } from './user-group.repository';
 import { ERRORS_MESSAGES } from 'src/constants/errors';
 import { USER_GROUP_ERRORS } from './common/errors';
@@ -285,5 +287,53 @@ export class UserGroupService {
     }
 
     return await this.userGroupRepository.getGroupInvitations(groupId);
+  }
+
+  private async assertGroupCreator(groupId: string, userId: string) {
+    const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
+
+    if (!group) {
+      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+    }
+
+    if (group.creatorId !== userId) {
+      throw new ForbiddenException(USER_GROUP_ERRORS.FORBIDDEN_MANAGE_CATEGORIES());
+    }
+
+    return group;
+  }
+
+  async createGroupCategory(groupId: string, dto: CreateGroupCategoryDto, userId: string) {
+    await this.assertGroupCreator(groupId, userId);
+    return this.userGroupRepository.createGroupCategory(groupId, dto);
+  }
+
+  async updateGroupCategory(
+    groupId: string,
+    categoryId: string,
+    dto: UpdateGroupCategoryDto,
+    userId: string,
+  ) {
+    await this.assertGroupCreator(groupId, userId);
+
+    const category = await this.userGroupRepository.findGroupCategoryById(categoryId);
+
+    if (!category || category.groupId !== groupId) {
+      throw new NotFoundException(USER_GROUP_ERRORS.GROUP_CATEGORY_NOT_FOUND(categoryId));
+    }
+
+    return this.userGroupRepository.updateGroupCategory(categoryId, dto);
+  }
+
+  async deleteGroupCategory(groupId: string, categoryId: string, userId: string) {
+    await this.assertGroupCreator(groupId, userId);
+
+    const category = await this.userGroupRepository.findGroupCategoryById(categoryId);
+
+    if (!category || category.groupId !== groupId) {
+      throw new NotFoundException(USER_GROUP_ERRORS.GROUP_CATEGORY_NOT_FOUND(categoryId));
+    }
+
+    return this.userGroupRepository.deleteGroupCategory(categoryId);
   }
 }

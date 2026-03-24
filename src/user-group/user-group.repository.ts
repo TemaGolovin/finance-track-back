@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
+import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
+import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
 import { Category, OperationType, Prisma } from '@prisma/client';
 
 @Injectable()
@@ -324,9 +326,20 @@ export class UserGroupRepository {
           },
           data: {
             personalCategories: {
-              create: {
-                userId,
-                categoryId: category.personalCategoryId,
+              upsert: {
+                where: {
+                  groupCategoryId_userId: {
+                    groupCategoryId: category.groupCategoryId,
+                    userId,
+                  },
+                },
+                create: {
+                  userId,
+                  categoryId: category.personalCategoryId,
+                },
+                update: {
+                  categoryId: category.personalCategoryId,
+                },
               },
             },
           },
@@ -360,6 +373,54 @@ export class UserGroupRepository {
           },
         },
       },
+    });
+  }
+
+  async createGroupCategory(groupId: string, dto: CreateGroupCategoryDto) {
+    return this.prisma.groupCategory.create({
+      data: {
+        name: dto.name,
+        categoryType: dto.categoryType,
+        groupId,
+      },
+      select: {
+        id: true,
+        name: true,
+        categoryType: true,
+        defaultKey: true,
+      },
+    });
+  }
+
+  async updateGroupCategory(categoryId: string, dto: UpdateGroupCategoryDto) {
+    return this.prisma.groupCategory.update({
+      where: { id: categoryId },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.categoryType !== undefined && { categoryType: dto.categoryType }),
+      },
+      select: {
+        id: true,
+        name: true,
+        categoryType: true,
+        defaultKey: true,
+      },
+    });
+  }
+
+  async deleteGroupCategory(categoryId: string) {
+    return this.prisma.groupCategory.delete({
+      where: { id: categoryId },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
+
+  async findGroupCategoryById(categoryId: string) {
+    return this.prisma.groupCategory.findUnique({
+      where: { id: categoryId },
     });
   }
 }
