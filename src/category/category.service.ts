@@ -1,13 +1,17 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { ERRORS_MESSAGES } from 'src/constants/errors';
-import { UpdateCategoryDto, CreateCategoryDto } from './dto';
-import { GetStatCategoriesDto } from './dto/get-stat-categories.dto';
-import { CategoryRepository } from './category.repository';
 import { Prisma } from '@prisma/client';
+import { I18nService } from 'nestjs-i18n';
+import { DEFAULT_CATEGORY_TEMPLATES } from 'src/constants/default-category-templates';
+import { CategoryRepository } from './category.repository';
+import { CreateCategoryDto, UpdateCategoryDto } from './dto';
+import { GetStatCategoriesDto } from './dto/get-stat-categories.dto';
 
 @Injectable()
 export class CategoryService {
-  constructor(private readonly categoryRepository: CategoryRepository) {}
+  constructor(
+    private readonly categoryRepository: CategoryRepository,
+    private readonly i18n: I18nService,
+  ) {}
 
   async getCategories(userId: string, type?: 'EXPENSE' | 'INCOME') {
     const categories = await this.categoryRepository.getCategories(userId, type);
@@ -24,10 +28,12 @@ export class CategoryService {
 
     if (categoryExists) {
       throw new ConflictException(
-        ERRORS_MESSAGES.ALREADY_EXISTS({
-          entity: 'Category',
-          fieldName: 'name',
-          fieldValue: categoryDto.name,
+        this.i18n.t('errors.ALREADY_EXISTS', {
+          args: {
+            entity: 'Category',
+            fieldName: 'name',
+            fieldValue: categoryDto.name,
+          },
         }),
       );
     }
@@ -49,10 +55,12 @@ export class CategoryService {
 
     if (categoryExists) {
       throw new ConflictException(
-        ERRORS_MESSAGES.ALREADY_EXISTS({
-          entity: 'Category',
-          fieldName: 'name',
-          fieldValue: categoryDto.name,
+        this.i18n.t('errors.ALREADY_EXISTS', {
+          args: {
+            entity: 'Category',
+            fieldName: 'name',
+            fieldValue: categoryDto.name,
+          },
         }),
       );
     }
@@ -140,12 +148,25 @@ export class CategoryService {
     const category = await this.findUniqueById(id);
 
     if (!category) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Category', id));
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', {
+          args: { entity: 'Category', id, fieldName: 'id' },
+        }),
+      );
     }
   }
 
   async createDefaultCategories(userId: string, groupId?: string) {
-    return await this.categoryRepository.createDefaultsCategories(userId, groupId);
+    const data = DEFAULT_CATEGORY_TEMPLATES.map((t) => ({
+      name: this.i18n.t(`defaultCategories.${t.defaultKey}`),
+      categoryType: t.categoryType,
+      userId,
+      defaultKey: t.defaultKey,
+      color: t.color,
+      icon: t.icon,
+      ...(groupId ? { groupId } : {}),
+    }));
+    return await this.categoryRepository.createDefaultsCategories(data);
   }
 
   async findUniqueById(id: string) {

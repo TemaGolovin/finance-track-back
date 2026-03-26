@@ -1,9 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsString, MinLength } from 'class-validator';
+import { i18nValidationMessage } from 'nestjs-i18n';
 
 export class UpdateCategoryDto {
   @IsString()
-  @MinLength(3, { message: 'name must be at least 3 characters long' })
+  @MinLength(3, {
+    message: i18nValidationMessage('validation.NAME_MIN_LENGTH'),
+  })
   @ApiProperty({
     description: 'Category name',
     example: 'Food',

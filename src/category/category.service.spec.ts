@@ -1,8 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { CategoryService } from './category.service';
-import { CategoryRepository } from './category.repository';
-import { CategoryResponseEntity } from './entity/category.entity';
+import { I18nService } from 'nestjs-i18n';
 import { OperationEntity } from 'src/operation/entity/operation.entity';
+import { CategoryRepository } from './category.repository';
+import { CategoryService } from './category.service';
+import { CategoryResponseEntity } from './entity/category.entity';
 
 type CategoryWithOperations = CategoryResponseEntity | { operations: Partial<OperationEntity>[] };
 
@@ -22,6 +23,10 @@ describe('CategoryService', () => {
         {
           provide: CategoryRepository,
           useValue: categoryRepositoryMock,
+        },
+        {
+          provide: I18nService,
+          useValue: { t: jest.fn(() => '') },
         },
       ],
     }).compile();
@@ -339,7 +344,7 @@ describe('CategoryService', () => {
   //   } catch (error) {
   //     expect(error).toBeInstanceOf(NotFoundException);
   //     expect(error.getStatus()).toBe(HttpStatus.NOT_FOUND);
-  //     expect(error.getResponse().message).toBe(ERRORS_MESSAGES.NOT_FOUND('Group', '1'));
+  //     expect(error.getResponse().message).toBe('Group with id 1 not found');
   //   }
   // });
 
@@ -357,7 +362,7 @@ describe('CategoryService', () => {
   //   } catch (error) {
   //     expect(error).toBeInstanceOf(NotFoundException);
   //     expect(error.getStatus()).toBe(HttpStatus.NOT_FOUND);
-  //     expect(error.getResponse().message).toBe(ERRORS_MESSAGES.NOT_FOUND('Group', '1'));
+  //     expect(error.getResponse().message).toBe('Group with id 1 not found');
   //   }
   // });
 });

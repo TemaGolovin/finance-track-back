@@ -1,5 +1,4 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
-import { UserService } from './user.service';
 import {
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -8,13 +7,13 @@ import {
   ApiQuery,
   ApiResponse,
 } from '@nestjs/swagger';
-import { InviteToGroupByUserIdsDto } from './dto/invite-to-group-by-name.dto';
-import { UserInfo } from 'src/decorators/user-auth-info.decorator';
-import { InvitationEntity } from './entity/invitation.entity';
-import { UpdateInvitationDto } from './dto/update-invitation.dto';
-import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
-import { USER_ERRORS } from './common/errors';
 import { InvitationStatus } from '@prisma/client';
+import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
+import { UserInfo } from 'src/decorators/user-auth-info.decorator';
+import { InviteToGroupByUserIdsDto } from './dto/invite-to-group-by-name.dto';
+import { UpdateInvitationDto } from './dto/update-invitation.dto';
+import { InvitationEntity } from './entity/invitation.entity';
+import { UserService } from './user.service';
 
 @Controller('user')
 export class UserController {
@@ -46,7 +45,7 @@ export class UserController {
     description: "when user can't invite to this group",
     type: TemplateErrorResponse,
     example: {
-      message: USER_ERRORS.FORBIDDEN_INVITATION_THIS_GROUP,
+      message: 'You cannot invite to a group unless you are the creator of the group.',
       statusCode: 403,
       error: 'Forbidden',
     },
@@ -54,7 +53,7 @@ export class UserController {
   @ApiConflictResponse({
     description: 'when user invite himself',
     type: TemplateErrorResponse,
-    example: { message: USER_ERRORS.SELF_INVITATION, statusCode: 409, error: 'Conflict' },
+    example: { message: "You can't invite yourself", statusCode: 409, error: 'Conflict' },
   })
   inviteToGroupByName(
     @Body() inviteByNameDto: InviteToGroupByUserIdsDto,

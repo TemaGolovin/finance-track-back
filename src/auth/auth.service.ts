@@ -1,18 +1,14 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { LoginDto, RegistrationDto } from './dto/auth.dto';
-import { ERRORS_MESSAGES } from 'src/constants/errors';
-import { compare, genSalt, hash } from 'bcryptjs';
-import { RegistrationEntity } from './entity/registration.entity';
-import { ResponseWrapper } from 'src/constants/response-wrapper';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { AuthRepository } from './auth.repository';
+import { compare, genSalt, hash } from 'bcryptjs';
+import { I18nService } from 'nestjs-i18n';
+import { tSafe } from 'src/i18n/t-safe';
 import { CategoryService } from 'src/category/category.service';
+import { ResponseWrapper } from 'src/constants/response-wrapper';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { AuthRepository } from './auth.repository';
+import { LoginDto, RegistrationDto } from './dto/auth.dto';
+import { RegistrationEntity } from './entity/registration.entity';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +17,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly authRepository: AuthRepository,
     private readonly categoryService: CategoryService,
+    private readonly i18n: I18nService,
   ) {}
 
   async registration(
@@ -117,7 +114,7 @@ export class AuthService {
     const { user: payload, refreshTokenInfo } = await this.findRefreshToken(user);
 
     if (!refreshTokenInfo) {
-      throw new UnauthorizedException(ERRORS_MESSAGES.UNAUTHORIZED());
+      throw new UnauthorizedException(tSafe('errors.UNAUTHORIZED', 'en'));
     }
 
     await this.authRepository.deleteRefreshTokenById(refreshTokenInfo.id);
@@ -166,23 +163,20 @@ export class AuthService {
   }
 
   private async validateUser(email: string, password: string) {
-    const user = await this.findUserByEmail(email);
-
-    const isValidPassword = await compare(password, user.password);
-
-    if (!isValidPassword) {
-      throw new UnauthorizedException(ERRORS_MESSAGES.WRONG_LOGIN_OR_PASSWORD());
-    }
-    return user;
-  }
-
-  private async findUserByEmail(email: string) {
     const user = await this.prisma.user.findUnique({
       where: { email },
     });
 
+    const wrongCreds = () =>
+      new UnauthorizedException(tSafe('errors.WRONG_LOGIN_OR_PASSWORD', 'en'));
+
     if (!user) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('user', email, 'email'));
+      throw wrongCreds();
+    }
+
+    const isValidPassword = await compare(password, user.password);
+    if (!isValidPassword) {
+      throw wrongCreds();
     }
 
     return user;
@@ -197,10 +191,8 @@ export class AuthService {
 
     if (checkUserName) {
       throw new ConflictException(
-        ERRORS_MESSAGES.ALREADY_EXISTS({
-          entity: 'user',
-          fieldName: 'name',
-          fieldValue: name,
+        this.i18n.t('errors.ALREADY_EXISTS', {
+          args: { entity: 'user', fieldName: 'name', fieldValue: name },
         }),
       );
     }
@@ -215,10 +207,8 @@ export class AuthService {
 
     if (checkUserEmail) {
       throw new ConflictException(
-        ERRORS_MESSAGES.ALREADY_EXISTS({
-          entity: 'user',
-          fieldName: 'email',
-          fieldValue: email,
+        this.i18n.t('errors.ALREADY_EXISTS', {
+          args: { entity: 'user', fieldName: 'email', fieldValue: email },
         }),
       );
     }
@@ -272,7 +262,7 @@ export class AuthService {
     deviceId: string;
   }) {
     if (!user) {
-      throw new UnauthorizedException(ERRORS_MESSAGES.UNAUTHORIZED());
+      throw new UnauthorizedException(tSafe('errors.UNAUTHORIZED', 'en'));
     }
 
     const refreshTokenInfo = await this.authRepository.findRefreshToken({

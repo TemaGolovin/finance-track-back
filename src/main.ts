@@ -1,9 +1,10 @@
-import { NestFactory, Reflector } from '@nestjs/core';
-import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { JwtAuthGuard } from './auth/guard/jwt.guard';
 import * as cookieParser from 'cookie-parser';
+import { i18nValidationErrorFactory } from 'nestjs-i18n';
+import { AppModule } from './app.module';
+import { JwtAuthGuard } from './auth/guard/jwt.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -29,7 +30,11 @@ async function bootstrap() {
 
   SwaggerModule.setup('api', app, SwaggerModule.createDocument(app, config));
 
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      exceptionFactory: i18nValidationErrorFactory,
+    }),
+  );
   app.use(cookieParser());
 
   await app.listen(process.env.PORT ?? 3000);

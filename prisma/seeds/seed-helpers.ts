@@ -1,6 +1,6 @@
 import { Category, PrismaClient } from '@prisma/client';
 import { genSalt, hash } from 'bcryptjs';
-import { getDefaultCategories } from '../../src/constants/get-default-categories';
+import { getDefaultCategoriesForSeed } from '../../src/constants/default-categories-seed';
 
 const genInteger = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1) + min);
 
@@ -8,7 +8,7 @@ export const createDefaultCategoriesWithOperations = async (
   prisma: PrismaClient,
   userId: string,
 ) => {
-  const newDefaultCategories = getDefaultCategories(userId);
+  const newDefaultCategories = getDefaultCategoriesForSeed(userId);
 
   await prisma.category.createMany({
     data: newDefaultCategories,

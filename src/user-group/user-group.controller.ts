@@ -1,9 +1,4 @@
-import { Controller, Get, Post, Body, Param, Delete, Query, Patch } from '@nestjs/common';
-import { UserGroupService } from './user-group.service';
-import { CreateUserGroupDto } from './dto/create-user-group.dto';
-import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
-import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
-import { UserInfo } from 'src/decorators/user-auth-info.decorator';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiForbiddenResponse,
@@ -11,13 +6,15 @@ import {
   ApiOkResponse,
   ApiResponse,
 } from '@nestjs/swagger';
-import { UserGroupEntity } from './entities/user-group.entity';
-import { USER_GROUP_MESSAGES } from './common/messages';
-import { USER_GROUP_ERRORS } from './common/errors';
-import { ERRORS_MESSAGES } from 'src/constants/errors';
-import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
-import { ConnectGroupCategoryDto } from './dto/connect-group-category.dto';
+import { UserInfo } from 'src/decorators/user-auth-info.decorator';
 import { InvitationEntity } from 'src/user/entity/invitation.entity';
+import { ConnectGroupCategoryDto } from './dto/connect-group-category.dto';
+import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
+import { CreateUserGroupDto } from './dto/create-user-group.dto';
+import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
+import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
+import { UserGroupEntity } from './entities/user-group.entity';
+import { UserGroupService } from './user-group.service';
 
 @Controller('user-group')
 export class UserGroupController {
@@ -36,7 +33,7 @@ export class UserGroupController {
   @ApiResponse({ status: 200, type: UserGroupEntity, isArray: true })
   @ApiNotFoundResponse({
     example: {
-      message: ERRORS_MESSAGES.NOT_FOUND('User', 'UUID', 'id'),
+      message: 'User with id UUID not found',
       statusCode: 404,
       error: 'Not Found',
     },
@@ -49,7 +46,7 @@ export class UserGroupController {
   @ApiResponse({ status: 200, type: UserGroupEntity })
   @ApiNotFoundResponse({
     example: {
-      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID', 'id'),
+      message: 'Group with id UUID not found',
       statusCode: 404,
       error: 'Not Found',
     },
@@ -77,7 +74,7 @@ export class UserGroupController {
   })
   @ApiNotFoundResponse({
     example: {
-      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID', 'id'),
+      message: 'Group with id UUID not found',
       statusCode: 404,
       error: 'Not Found',
     },
@@ -127,7 +124,7 @@ export class UserGroupController {
   })
   @ApiNotFoundResponse({
     example: {
-      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID', 'id'),
+      message: 'Group with id UUID not found',
       statusCode: 404,
       error: 'Not Found',
     },
@@ -135,7 +132,12 @@ export class UserGroupController {
   async getOperations(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
     @Param('groupId') groupId: string,
-    @Query() { startDate, endDate, operationType, categoryId }: GetUserGroupStatDto & { categoryId?: string },
+    @Query() {
+      startDate,
+      endDate,
+      operationType,
+      categoryId,
+    }: GetUserGroupStatDto & { categoryId?: string },
   ) {
     return await this.userGroupService.getUserGroupOperations({
       groupId,
@@ -150,7 +152,7 @@ export class UserGroupController {
   @ApiResponse({
     status: 200,
     example: {
-      message: USER_GROUP_MESSAGES.delete('family'),
+      message: 'Group "family" deleted successfully',
       group: {
         id: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b',
         name: 'family',
@@ -171,7 +173,7 @@ export class UserGroupController {
   })
   @ApiNotFoundResponse({
     example: {
-      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID', 'id'),
+      message: 'Group with id UUID not found',
       statusCode: 404,
       error: 'Not Found',
     },
@@ -181,7 +183,7 @@ export class UserGroupController {
       notCreator: {
         summary: 'Requester is not the group creator',
         value: {
-          message: USER_GROUP_ERRORS.FORBIDDEN_REMOVE_MEMBER(),
+          message: 'Only the group creator can remove members',
           statusCode: 403,
           error: 'Forbidden',
         },
@@ -189,7 +191,7 @@ export class UserGroupController {
       removeCreator: {
         summary: 'Attempt to remove the group creator',
         value: {
-          message: USER_GROUP_ERRORS.CANNOT_REMOVE_CREATOR(),
+          message: 'Cannot remove the group creator',
           statusCode: 403,
           error: 'Forbidden',
         },
@@ -227,7 +229,7 @@ export class UserGroupController {
   })
   @ApiNotFoundResponse({
     example: {
-      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID', 'id'),
+      message: 'Group with id UUID not found',
       statusCode: 404,
       error: 'Not Found',
     },
@@ -258,7 +260,7 @@ export class UserGroupController {
   })
   @ApiNotFoundResponse({
     example: {
-      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID', 'id'),
+      message: 'Group with id UUID not found',
       statusCode: 404,
       error: 'Not Found',
     },
@@ -276,7 +278,7 @@ export class UserGroupController {
   })
   @ApiForbiddenResponse({
     example: {
-      message: USER_GROUP_ERRORS.FORBIDDEN_MANAGE_CATEGORIES(),
+      message: 'Only the group creator can manage group categories',
       statusCode: 403,
       error: 'Forbidden',
     },
@@ -295,7 +297,7 @@ export class UserGroupController {
   })
   @ApiForbiddenResponse({
     example: {
-      message: USER_GROUP_ERRORS.FORBIDDEN_MANAGE_CATEGORIES(),
+      message: 'Only the group creator can manage group categories',
       statusCode: 403,
       error: 'Forbidden',
     },
@@ -315,7 +317,7 @@ export class UserGroupController {
   })
   @ApiForbiddenResponse({
     example: {
-      message: USER_GROUP_ERRORS.FORBIDDEN_MANAGE_CATEGORIES(),
+      message: 'Only the group creator can manage group categories',
       statusCode: 403,
       error: 'Forbidden',
     },
@@ -329,7 +331,8 @@ export class UserGroupController {
   }
 
   @Get(':id/invitations')
-  @ApiResponse({    type: [InvitationEntity],
+  @ApiResponse({
+    type: [InvitationEntity],
     isArray: true,
     example: [
       {
@@ -351,7 +354,7 @@ export class UserGroupController {
   })
   @ApiNotFoundResponse({
     example: {
-      message: ERRORS_MESSAGES.NOT_FOUND('Group', 'UUID'),
+      message: 'Group with id UUID not found',
       statusCode: 404,
       error: 'Not Found',
     },

@@ -4,19 +4,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { UserRepository } from './user.repository';
-import { InviteToGroupByUserIdsDto } from './dto/invite-to-group-by-name.dto';
-import { ERRORS_MESSAGES } from 'src/constants/errors';
-import { UpdateInvitationDto } from './dto/update-invitation.dto';
 import { InvitationStatus } from '@prisma/client';
-import { USER_ERRORS } from './common/errors';
+import { I18nService } from 'nestjs-i18n';
 import { UserGroupService } from 'src/user-group/user-group.service';
+import { InviteToGroupByUserIdsDto } from './dto/invite-to-group-by-name.dto';
+import { UpdateInvitationDto } from './dto/update-invitation.dto';
+import { UserRepository } from './user.repository';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly userGroupService: UserGroupService,
+    private readonly i18n: I18nService,
   ) {}
   async findUsersByUsername(username: string, userId: string) {
     return await this.userRepository.findUsersByUsername(username, userId);
@@ -27,21 +27,29 @@ export class UserService {
     const findUsers = await this.userRepository.findUsersByIds(userIds);
 
     if (findUsers.length !== userIds.length) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('users', 'some users', 'ids'));
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', {
+          args: { entity: 'users', id: 'some users', fieldName: 'ids' },
+        }),
+      );
     }
 
     if (findUsers.some((user) => user.id === senderId)) {
-      throw new ConflictException(USER_ERRORS.SELF_INVITATION);
+      throw new ConflictException(this.i18n.t('user.SELF_INVITATION'));
     }
 
     const targetUserGroup = await this.userGroupService.getUserGroupById(groupId, senderId);
 
     if (!targetUserGroup) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('group', groupId, 'id'));
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', {
+          args: { entity: 'group', id: groupId, fieldName: 'id' },
+        }),
+      );
     }
 
     if (targetUserGroup.creatorId !== senderId) {
-      throw new ForbiddenException(USER_ERRORS.FORBIDDEN_INVITATION_THIS_GROUP);
+      throw new ForbiddenException(this.i18n.t('user.FORBIDDEN_INVITATION_THIS_GROUP'));
     }
 
     const invitations = await this.userRepository.createInvitations({
@@ -71,11 +79,19 @@ export class UserService {
     const invitation = await this.userRepository.getInventionById(invitationId);
 
     if (!invitation) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('invitation', invitationId, 'id'));
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', {
+          args: { entity: 'invitation', id: invitationId, fieldName: 'id' },
+        }),
+      );
     }
 
     if (invitation.recipientId !== userId && invitation.senderId !== userId) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('invitation', invitationId, 'id'));
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', {
+          args: { entity: 'invitation', id: invitationId, fieldName: 'id' },
+        }),
+      );
     }
 
     const { status } = updateInvitationDto;
@@ -105,7 +121,7 @@ export class UserService {
     const userStatusInInvitation = invitation.recipientId === userId ? 'recipient' : 'sender';
 
     if (!validTransitions[invitation.status]?.[userStatusInInvitation]?.includes(status)) {
-      throw new ForbiddenException(ERRORS_MESSAGES.FORBIDDEN());
+      throw new ForbiddenException(this.i18n.t('errors.FORBIDDEN'));
     }
 
     if (status === InvitationStatus.ACCEPTED) {

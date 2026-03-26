@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto';
 import { GetStatCategoriesDto } from './dto/get-stat-categories.dto';
-import { getDefaultCategories } from 'src/constants/get-default-categories';
 
 @Injectable()
 export class CategoryRepository {
@@ -94,9 +94,9 @@ export class CategoryRepository {
     });
   }
 
-  async createDefaultsCategories(userId: string, groupId?: string) {
+  async createDefaultsCategories(data: Prisma.CategoryCreateManyInput[]) {
     return await this.prisma.category.createMany({
-      data: getDefaultCategories(userId, groupId),
+      data,
     });
   }
 }

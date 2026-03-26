@@ -1,0 +1,21 @@
+{
+  "supermarket": "Supermarkets",
+  "cafe": "Cafés & restaurants",
+  "transport": "Transport",
+  "home": "Home & rent",
+  "health": "Health",
+  "education": "Education",
+  "entertainment": "Entertainment",
+  "clothes": "Clothing & shoes",
+  "communication": "Mobile, internet & subscriptions",
+  "expenseGifts": "Gifts",
+  "travel": "Travel",
+  "auto": "Car",
+  "sport": "Sports",
+  "pets": "Pets",
+  "expenseOther": "Other",
+  "salary": "Salary",
+  "part-time": "Side income",
+  "incomeGifts": "Gifts",
+  "incomeOther": "Other"
+}

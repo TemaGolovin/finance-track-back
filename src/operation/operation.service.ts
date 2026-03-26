@@ -1,15 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateOperationDto } from './dto';
-import { ERRORS_MESSAGES } from 'src/constants/errors';
-import { OperationRepository } from './operation.repository';
-import { CategoryService } from 'src/category/category.service';
 import { Operation, Prisma } from '@prisma/client';
+import { I18nService } from 'nestjs-i18n';
+import { CategoryService } from 'src/category/category.service';
+import { CreateOperationDto } from './dto';
+import { OperationRepository } from './operation.repository';
 
 @Injectable()
 export class OperationService {
   constructor(
     private readonly operationRepository: OperationRepository,
     private readonly categoryService: CategoryService,
+    private readonly i18n: I18nService,
   ) {}
   async getOperations(
     userId: string,
@@ -62,7 +63,11 @@ export class OperationService {
     const operation = await this.operationRepository.findUniqueById(id);
 
     if (!operation) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Operation', id));
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', {
+          args: { entity: 'Operation', id, fieldName: 'id' },
+        }),
+      );
     }
 
     return operation;
@@ -73,7 +78,13 @@ export class OperationService {
 
     if (!category) {
       throw new NotFoundException(
-        ERRORS_MESSAGES.NOT_FOUND('Category', createOperationDto.categoryId),
+        this.i18n.t('errors.NOT_FOUND', {
+          args: {
+            entity: 'Category',
+            id: createOperationDto.categoryId,
+            fieldName: 'id',
+          },
+        }),
       );
     }
 
@@ -96,7 +107,11 @@ export class OperationService {
     const operation = await this.operationRepository.findUniqueById(id);
 
     if (!operation) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Operation', id));
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', {
+          args: { entity: 'Operation', id, fieldName: 'id' },
+        }),
+      );
     }
   }
 }

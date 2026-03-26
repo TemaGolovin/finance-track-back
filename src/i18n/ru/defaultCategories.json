@@ -1,0 +1,21 @@
+{
+  "supermarket": "Супермаркеты",
+  "cafe": "Кафе/Рестораны",
+  "transport": "Транспорт",
+  "home": "Дом/квартира",
+  "health": "Здоровье",
+  "education": "Образование",
+  "entertainment": "Развлечения",
+  "clothes": "Одежда/обувь",
+  "communication": "Связь/интернет/подписки",
+  "expenseGifts": "Подарки",
+  "travel": "Путешествия",
+  "auto": "Авто",
+  "sport": "Спорт",
+  "pets": "Домашние питомцы",
+  "expenseOther": "Другое",
+  "salary": "Зарплата",
+  "part-time": "Подработка",
+  "incomeGifts": "Подарки",
+  "incomeOther": "Другое"
+}

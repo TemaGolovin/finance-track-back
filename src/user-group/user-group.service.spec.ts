@@ -1,11 +1,21 @@
+import { HttpStatus, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { UserGroupService } from './user-group.service';
+import { Prisma } from '@prisma/client';
+import { I18nService } from 'nestjs-i18n';
 import { CategoryService } from 'src/category/category.service';
 import { UserGroupEntity } from './entities/user-group.entity';
 import { UserGroupRepository } from './user-group.repository';
-import { HttpStatus, NotFoundException } from '@nestjs/common';
-import { ERRORS_MESSAGES } from 'src/constants/errors';
-import { Prisma } from '@prisma/client';
+import { UserGroupService } from './user-group.service';
+
+const i18nMock = {
+  t: jest.fn((key: string, opts?: { args?: Record<string, string> }) => {
+    if (key === 'errors.NOT_FOUND' && opts?.args) {
+      const { entity, id, fieldName } = opts.args;
+      return `${entity} with ${fieldName} ${id} not found`;
+    }
+    return key;
+  }),
+};
 
 const existedUserGroup: UserGroupEntity = {
   createAt: new Date(),
@@ -59,6 +69,10 @@ describe('UserGroupService', () => {
         {
           provide: CategoryService,
           useValue: {},
+        },
+        {
+          provide: I18nService,
+          useValue: i18nMock,
         },
       ],
     }).compile();
@@ -177,7 +191,7 @@ describe('UserGroupService', () => {
     } catch (error) {
       expect(error).toBeInstanceOf(NotFoundException);
       expect(error.getStatus()).toBe(HttpStatus.NOT_FOUND);
-      expect(error.getResponse().message).toBe(ERRORS_MESSAGES.NOT_FOUND('Group', '1'));
+      expect(error.getResponse().message).toBe('Group with id 1 not found');
     }
   });
 
@@ -195,7 +209,7 @@ describe('UserGroupService', () => {
     } catch (error) {
       expect(error).toBeInstanceOf(NotFoundException);
       expect(error.getStatus()).toBe(HttpStatus.NOT_FOUND);
-      expect(error.getResponse().message).toBe(ERRORS_MESSAGES.NOT_FOUND('Group', '1'));
+      expect(error.getResponse().message).toBe('Group with id 1 not found');
     }
   });
 });

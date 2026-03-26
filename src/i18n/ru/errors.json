@@ -1,0 +1,8 @@
+{
+  "NOT_FOUND": "{entity} с {fieldName} {id} не найден",
+  "ALREADY_EXISTS": "{entity} с полем \"{fieldName}: {fieldValue}\" уже существует",
+  "WRONG_LOGIN_OR_PASSWORD": "Неверный логин или пароль",
+  "FORBIDDEN": "У вас нет доступа к этому ресурсу",
+  "UNAUTHORIZED": "Не авторизован",
+  "INVALID_DATE": "Некорректная дата"
+}

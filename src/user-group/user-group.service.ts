@@ -4,24 +4,27 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { CreateUserGroupDto } from './dto/create-user-group.dto';
-import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
-import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
-import { UserGroupRepository } from './user-group.repository';
-import { ERRORS_MESSAGES } from 'src/constants/errors';
-import { USER_GROUP_ERRORS } from './common/errors';
-import { USER_GROUP_MESSAGES } from './common/messages';
-import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
+import { Prisma } from '@prisma/client';
+import { I18nService } from 'nestjs-i18n';
 import { CategoryService } from 'src/category/category.service';
 import { ConnectGroupCategoryDto } from './dto/connect-group-category.dto';
-import { Prisma } from '@prisma/client';
+import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
+import { CreateUserGroupDto } from './dto/create-user-group.dto';
+import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
+import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
+import { UserGroupRepository } from './user-group.repository';
 
 @Injectable()
 export class UserGroupService {
   constructor(
     private readonly userGroupRepository: UserGroupRepository,
     private readonly categoryService: CategoryService,
+    private readonly i18n: I18nService,
   ) {}
+
+  private notFound(entity: string, id: string, fieldName = 'id') {
+    return this.i18n.t('errors.NOT_FOUND', { args: { entity, id, fieldName } });
+  }
 
   async create(createUserGroupDto: CreateUserGroupDto, userId: string) {
     const newGroup = await this.userGroupRepository.createUserGroup(createUserGroupDto, userId);
@@ -34,7 +37,7 @@ export class UserGroupService {
 
   async findAll(userId: string) {
     if (!userId) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('User', userId));
+      throw new NotFoundException(this.notFound('User', userId));
     }
 
     return this.userGroupRepository.getUserGroupsByUserId(userId);
@@ -44,13 +47,13 @@ export class UserGroupService {
     const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
 
     if (!group) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     const userMemberInGroup = group.users.find((user) => user.user.id === userId);
 
     if (!userMemberInGroup) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     const usersWithStatusInvitation = group.users.map(({ user }) => {
@@ -96,13 +99,13 @@ export class UserGroupService {
     const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
 
     if (!group) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     const userMemberInGroup = group.users.find((user) => user.user.id === userId);
 
     if (!userMemberInGroup) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     const byCategories = await this.userGroupRepository.getUserGroupStat(
@@ -145,13 +148,13 @@ export class UserGroupService {
     const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
 
     if (!group) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     const userMemberInGroup = group.users.find((user) => user.user.id === userId);
 
     if (!userMemberInGroup) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     const operations = await this.userGroupRepository.getUserGroupOperations(
@@ -198,15 +201,15 @@ export class UserGroupService {
     const group = await this.userGroupRepository.getUserGroupById(groupId, requesterId);
 
     if (!group) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     if (group.creatorId !== requesterId) {
-      throw new ForbiddenException(USER_GROUP_ERRORS.FORBIDDEN_REMOVE_MEMBER);
+      throw new ForbiddenException(this.i18n.t('userGroup.FORBIDDEN_REMOVE_MEMBER'));
     }
 
     if (memberId === group.creatorId) {
-      throw new ForbiddenException(USER_GROUP_ERRORS.CANNOT_REMOVE_CREATOR);
+      throw new ForbiddenException(this.i18n.t('userGroup.CANNOT_REMOVE_CREATOR'));
     }
 
     return await this.userGroupRepository.removeUserFromGroup(memberId, groupId);
@@ -216,24 +219,24 @@ export class UserGroupService {
     const groupForDelete = await this.userGroupRepository.getUserGroupById(id, userId);
 
     if (!groupForDelete) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', id));
+      throw new NotFoundException(this.notFound('Group', id));
     }
 
     const userMemberInGroup = groupForDelete.users.find((user) => user.user.id === userId);
 
     if (!userMemberInGroup) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', id));
+      throw new NotFoundException(this.notFound('Group', id));
     }
 
     if (groupForDelete.creatorId !== userId) {
-      throw new ForbiddenException(USER_GROUP_ERRORS.FORBIDDEN_DELETE);
+      throw new ForbiddenException(this.i18n.t('userGroup.FORBIDDEN_DELETE'));
     }
 
     const deletedGroup = await this.userGroupRepository.deleteUserGroup(id);
 
     return {
       group: deletedGroup,
-      message: USER_GROUP_MESSAGES.delete(deletedGroup.name),
+      message: this.i18n.t('userGroup.GROUP_DELETED', { args: { name: deletedGroup.name } }),
     };
   }
 
@@ -245,13 +248,13 @@ export class UserGroupService {
     const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
 
     if (!group) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     const userMemberInGroup = group.users.find((user) => user.user.id === userId);
 
     if (!userMemberInGroup) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     const { relatedCategories } = groupCategoryDto;
@@ -260,7 +263,9 @@ export class UserGroupService {
       .filter((id): id is string => id != null);
 
     if (new Set(connectPersonalIds).size !== connectPersonalIds.length) {
-      throw new BadRequestException(USER_GROUP_ERRORS.DUPLICATE_PERSONAL_CATEGORY_IN_CONNECT());
+      throw new BadRequestException(
+        this.i18n.t('userGroup.DUPLICATE_PERSONAL_CATEGORY_IN_CONNECT'),
+      );
     }
 
     const groupCategoryIds = [...new Set(relatedCategories.map((r) => r.groupCategoryId))];
@@ -269,14 +274,14 @@ export class UserGroupService {
       groupCategoryIds,
     );
     if (categoriesInGroupCount !== groupCategoryIds.length) {
-      throw new BadRequestException(USER_GROUP_ERRORS.GROUP_CATEGORY_NOT_IN_GROUP());
+      throw new BadRequestException(this.i18n.t('userGroup.GROUP_CATEGORY_NOT_IN_GROUP'));
     }
 
     const userCategories = await this.categoryService.getCategories(userId);
     const ownedCategoryIds = new Set(userCategories.map((c) => c.id));
     for (const personalCategoryId of new Set(connectPersonalIds)) {
       if (!ownedCategoryIds.has(personalCategoryId)) {
-        throw new BadRequestException(USER_GROUP_ERRORS.PERSONAL_CATEGORY_NOT_OWNED());
+        throw new BadRequestException(this.i18n.t('userGroup.PERSONAL_CATEGORY_NOT_OWNED'));
       }
     }
 
@@ -291,13 +296,13 @@ export class UserGroupService {
     const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
 
     if (!group) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     const userMemberInGroup = group.users.find((user) => user.user.id === userId);
 
     if (!userMemberInGroup) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     const categories = await this.userGroupRepository.getGroupCategories(groupId, userId);
@@ -315,7 +320,7 @@ export class UserGroupService {
     const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
 
     if (!group) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     return await this.userGroupRepository.getGroupInvitations(groupId);
@@ -325,11 +330,11 @@ export class UserGroupService {
     const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
 
     if (!group) {
-      throw new NotFoundException(ERRORS_MESSAGES.NOT_FOUND('Group', groupId));
+      throw new NotFoundException(this.notFound('Group', groupId));
     }
 
     if (group.creatorId !== userId) {
-      throw new ForbiddenException(USER_GROUP_ERRORS.FORBIDDEN_MANAGE_CATEGORIES());
+      throw new ForbiddenException(this.i18n.t('userGroup.FORBIDDEN_MANAGE_CATEGORIES'));
     }
 
     return group;
@@ -351,7 +356,9 @@ export class UserGroupService {
     const category = await this.userGroupRepository.findGroupCategoryById(categoryId);
 
     if (!category || category.groupId !== groupId) {
-      throw new NotFoundException(USER_GROUP_ERRORS.GROUP_CATEGORY_NOT_FOUND(categoryId));
+      throw new NotFoundException(
+        this.i18n.t('userGroup.GROUP_CATEGORY_NOT_FOUND', { args: { id: categoryId } }),
+      );
     }
 
     return this.userGroupRepository.updateGroupCategory(categoryId, dto);
@@ -363,7 +370,9 @@ export class UserGroupService {
     const category = await this.userGroupRepository.findGroupCategoryById(categoryId);
 
     if (!category || category.groupId !== groupId) {
-      throw new NotFoundException(USER_GROUP_ERRORS.GROUP_CATEGORY_NOT_FOUND(categoryId));
+      throw new NotFoundException(
+        this.i18n.t('userGroup.GROUP_CATEGORY_NOT_FOUND', { args: { id: categoryId } }),
+      );
     }
 
     return this.userGroupRepository.deleteGroupCategory(categoryId);
