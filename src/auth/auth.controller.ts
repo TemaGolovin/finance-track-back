@@ -1,6 +1,18 @@
-import { Body, Controller, Get, Headers, Post, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto, RegistrationDto } from './dto/auth.dto';
+import { ChangePasswordDto, LoginDto, RegistrationDto, UpdateProfileDto } from './dto/auth.dto';
 import { RegistrationEntity } from './entity/registration.entity';
 import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
 import { ApiConflictResponse, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
@@ -124,5 +136,62 @@ export class AuthController {
   @Get('me')
   async me(@UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string }) {
     return this.authService.me(userInfo);
+  }
+
+  @Patch('profile')
+  async updateProfile(
+    @Res() response: Response,
+    @Body() dto: UpdateProfileDto,
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+    @Headers('User-agent') userAgent: string,
+  ) {
+    const { data } = await this.authService.updateProfile(userInfo, dto.name, userAgent);
+    const { refreshToken, ...dataWithoutRefresh } = data;
+
+    response.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/',
+    });
+    response.cookie('accessToken', dataWithoutRefresh.token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      path: '/',
+    });
+
+    return response.status(200).json({
+      success: true,
+      data: {
+        id: dataWithoutRefresh.id,
+        email: dataWithoutRefresh.email,
+        name: dataWithoutRefresh.name,
+        token: dataWithoutRefresh.token,
+      },
+    });
+  }
+
+  @Post('change-password')
+  async changePassword(
+    @Body() dto: ChangePasswordDto,
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+  ) {
+    return this.authService.changePassword(userInfo, dto);
+  }
+
+  @Get('sessions')
+  async sessions(
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+  ) {
+    return this.authService.getSessions(userInfo);
+  }
+
+  @Delete('sessions/:deviceId')
+  async revokeSession(
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+    @Param('deviceId', ParseUUIDPipe) deviceId: string,
+  ) {
+    return this.authService.revokeSession(userInfo, deviceId);
   }
 }

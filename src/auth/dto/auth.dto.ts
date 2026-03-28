@@ -84,3 +84,27 @@ export class LoginDto {
   })
   deviceId: string;
 }
+
+export class UpdateProfileDto {
+  @IsString()
+  @ApiProperty({
+    description: 'user nickname',
+    example: 'voin123',
+    required: true,
+    type: String,
+  })
+  name: string;
+}
+
+export class ChangePasswordDto {
+  @IsString()
+  @ApiProperty({ description: 'current password', required: true })
+  currentPassword: string;
+
+  @IsString()
+  @MinLength(6, {
+    message: i18nValidationMessage('validation.PASSWORD_MIN_LENGTH'),
+  })
+  @ApiProperty({ description: 'new password', required: true })
+  newPassword: string;
+}

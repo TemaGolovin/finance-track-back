@@ -60,4 +60,17 @@ export class AuthRepository {
       },
     });
   }
+
+  findRefreshTokensByUserId(userId: string) {
+    return this.prisma.refreshToken.findMany({
+      where: { userId },
+      orderBy: { createAt: 'desc' },
+      select: {
+        deviceId: true,
+        userAgent: true,
+        createAt: true,
+        expiresAt: true,
+      },
+    });
+  }
 }

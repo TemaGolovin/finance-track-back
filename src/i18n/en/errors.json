@@ -1,4 +1,5 @@
 {
+  "CANNOT_REVOKE_CURRENT_SESSION": "You cannot revoke the current session here; use log out instead",
   "NOT_FOUND": "{entity} with {fieldName} {id} not found",
   "ALREADY_EXISTS": "{entity} with field \"{fieldName}: {fieldValue}\" already exists",
   "WRONG_LOGIN_OR_PASSWORD": "Wrong login or password",

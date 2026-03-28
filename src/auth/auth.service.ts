@@ -1,4 +1,10 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { compare, genSalt, hash } from 'bcryptjs';
 import { I18nService } from 'nestjs-i18n';
@@ -7,7 +13,7 @@ import { CategoryService } from 'src/category/category.service';
 import { ResponseWrapper } from 'src/constants/response-wrapper';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthRepository } from './auth.repository';
-import { LoginDto, RegistrationDto } from './dto/auth.dto';
+import { ChangePasswordDto, LoginDto, RegistrationDto } from './dto/auth.dto';
 import { RegistrationEntity } from './entity/registration.entity';
 
 @Injectable()
@@ -151,15 +157,141 @@ export class AuthService {
     });
   }
 
-  async me(user: { email: string; name: string; id: string; deviceId: string }) {
+  async me(user: { id: string }) {
+    const dbUser = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: { id: true, email: true, name: true },
+    });
+
+    if (!dbUser) {
+      throw new UnauthorizedException(tSafe('errors.UNAUTHORIZED', 'en'));
+    }
+
+    return {
+      success: true,
+      data: dbUser,
+    };
+  }
+
+  async updateProfile(
+    user: { id: string; deviceId: string },
+    name: string,
+    userAgent: string,
+  ): Promise<{
+    success: true;
+    data: {
+      id: string;
+      email: string;
+      name: string;
+      token: string;
+      refreshToken: string;
+    };
+  }> {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      throw new BadRequestException(this.i18n.t('validation.NAME_REQUIRED'));
+    }
+
+    const nameTaken = await this.prisma.user.findFirst({
+      where: { name: trimmed, NOT: { id: user.id } },
+    });
+
+    if (nameTaken) {
+      throw new ConflictException(
+        this.i18n.t('errors.ALREADY_EXISTS', {
+          args: { entity: 'user', fieldName: 'name', fieldValue: trimmed },
+        }),
+      );
+    }
+
+    const updated = await this.prisma.user.update({
+      where: { id: user.id },
+      data: { name: trimmed },
+      select: { id: true, email: true, name: true },
+    });
+
+    await this.authRepository.deleteRefreshTokenByUserIdDeviceId(user.id, user.deviceId);
+
+    const tokens = await this.createTokens({
+      id: updated.id,
+      email: updated.email,
+      name: updated.name,
+      deviceId: user.deviceId,
+    });
+
+    await this.saveRefreshToken({
+      refreshToken: tokens.refreshToken,
+      userId: updated.id,
+      deviceId: user.deviceId,
+      userAgent,
+    });
+
     return {
       success: true,
       data: {
-        email: user.email,
-        name: user.name,
-        id: user.id,
+        ...updated,
+        token: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
       },
     };
+  }
+
+  async changePassword(user: { id: string }, dto: ChangePasswordDto) {
+    const dbUser = await this.prisma.user.findUnique({ where: { id: user.id } });
+
+    if (!dbUser) {
+      throw new UnauthorizedException(tSafe('errors.UNAUTHORIZED', 'en'));
+    }
+
+    const isValid = await compare(dto.currentPassword, dbUser.password);
+    if (!isValid) {
+      throw new UnauthorizedException(tSafe('errors.WRONG_LOGIN_OR_PASSWORD', 'en'));
+    }
+
+    const salt = await genSalt(10);
+    const hashPassword = await hash(dto.newPassword, salt);
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashPassword },
+    });
+
+    return { success: true };
+  }
+
+  async getSessions(user: { id: string; deviceId: string }) {
+    const rows = await this.authRepository.findRefreshTokensByUserId(user.id);
+
+    return {
+      success: true,
+      data: rows.map((r) => ({
+        deviceId: r.deviceId,
+        userAgent: r.userAgent,
+        createdAt: r.createAt.toISOString(),
+        expiresAt: r.expiresAt.toISOString(),
+        isCurrent: r.deviceId === user.deviceId,
+      })),
+    };
+  }
+
+  async revokeSession(user: { id: string; deviceId: string }, targetDeviceId: string) {
+    if (targetDeviceId === user.deviceId) {
+      throw new BadRequestException(this.i18n.t('errors.CANNOT_REVOKE_CURRENT_SESSION'));
+    }
+
+    const result = await this.prisma.refreshToken.deleteMany({
+      where: { userId: user.id, deviceId: targetDeviceId },
+    });
+
+    if (result.count === 0) {
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', {
+          args: { entity: 'session', id: targetDeviceId, fieldName: 'deviceId' },
+        }),
+      );
+    }
+
+    return { success: true };
   }
 
   private async validateUser(email: string, password: string) {

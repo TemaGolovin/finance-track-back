@@ -1,4 +1,5 @@
 {
+  "CANNOT_REVOKE_CURRENT_SESSION": "Текущую сессию здесь завершить нельзя — используйте выход из аккаунта",
   "NOT_FOUND": "{entity} с {fieldName} {id} не найден",
   "ALREADY_EXISTS": "{entity} с полем \"{fieldName}: {fieldValue}\" уже существует",
   "WRONG_LOGIN_OR_PASSWORD": "Неверный логин или пароль",

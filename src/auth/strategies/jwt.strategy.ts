@@ -16,7 +16,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate(userData: { email: string; name: string; id: string }): unknown {
+  validate(userData: { email: string; name: string; id: string; deviceId: string }) {
     return userData;
   }
 }
