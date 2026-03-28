@@ -1,7 +1,7 @@
-import * as path from 'node:path';
 import { Global, Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { AcceptLanguageResolver, I18nModule } from 'nestjs-i18n';
+import { getI18nTranslationsRoot } from './i18n-translations-root';
 import { SafeI18nValidationExceptionFilter } from './safe-i18n-validation-exception.filter';
 
 @Global()
@@ -14,7 +14,7 @@ import { SafeI18nValidationExceptionFilter } from './safe-i18n-validation-except
         'ru-*': 'ru',
       },
       loaderOptions: {
-        path: path.join(__dirname, '..', '..', 'i18n'),
+        path: getI18nTranslationsRoot(),
         watch: process.env.NODE_ENV !== 'production',
       },
       resolvers: [AcceptLanguageResolver],

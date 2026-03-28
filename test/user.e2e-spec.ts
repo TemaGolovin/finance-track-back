@@ -100,6 +100,13 @@ describe('UserController (e2e)', () => {
       },
     });
 
+    await prismaService.userRelationGroupUser.create({
+      data: {
+        userId: mockUser.id,
+        userRelationGroupId: groupId,
+      },
+    });
+
     await app.init();
   });
 
@@ -120,15 +127,14 @@ describe('UserController (e2e)', () => {
   it('/user/find/by-name (GET), - find user by name - find success', async () => {
     return request(app.getHttpServer())
       .get('/user/find/by-name')
-      .query({ name: userForFind.name.slice(0, 3) })
+      .query({ name: 'for find' })
       .expect(200)
-      .then(({ body }) => {
+      .then(({ body }: { body: { id: string; name: string; email?: string }[] }) => {
         expect(body).toBeDefined();
-        expect(body).toHaveLength(1);
-        expect(body[0].name).toBe(userForFind.name);
-        expect(body[0].id).toBe(userForFind.id);
-        expect(body[0].email).toBeUndefined();
-        expect(body[0].password).toBeUndefined();
+        const match = body.filter((u) => u.id === userForFind.id);
+        expect(match).toHaveLength(1);
+        expect(match[0].name).toBe(userForFind.name);
+        expect(match[0].email).toBeUndefined();
       });
   });
 

@@ -1,6 +1,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { I18nContext } from 'nestjs-i18n';
+import { getI18nTranslationsRoot } from './i18n-translations-root';
 
 type TranslationDict = Record<string, Record<string, string>>;
 
@@ -30,7 +31,7 @@ function loadTranslations(i18nDir: string): TranslationDict {
   return result;
 }
 
-const i18nDir = path.join(__dirname, '..', '..', 'i18n');
+const i18nDir = getI18nTranslationsRoot();
 const cache: TranslationDict = loadTranslations(i18nDir);
 
 export function tSafe(key: string, fallbackLanguage: string): string {
