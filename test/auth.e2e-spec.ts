@@ -5,6 +5,8 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RegistrationDto } from 'src/auth/dto/auth.dto';
 import { compareSync } from 'bcryptjs';
+import { EmailTokenType } from '@prisma/client';
+import { MailService } from 'src/mail/mail.service';
 
 const registrationDto: Partial<RegistrationDto> = {
   deviceId: '12341234-1234-1234-1234-87654321',
@@ -30,10 +32,20 @@ describe('AuthController (e2e)', () => {
     refreshToken: null,
   };
 
+  let verifyEmailToken: string | null = null;
+  let resetPasswordToken: string | null = null;
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(MailService)
+      .useValue({
+        sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+        sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+        sendEmailChangeConfirmation: jest.fn().mockResolvedValue(undefined),
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
 
@@ -44,12 +56,9 @@ describe('AuthController (e2e)', () => {
 
   afterAll(async () => {
     if (prismaService) {
-      userInfo.token &&
-        (await prismaService.refreshToken.delete({
-          where: {
-            userId_deviceId: { userId: userInfo.userId, deviceId: registrationDto.deviceId },
-          },
-        }));
+      await prismaService.refreshToken.deleteMany({
+        where: { userId: userInfo.userId },
+      });
       userInfo?.userId && (await prismaService.user.delete({ where: { id: userInfo.userId } }));
 
       await prismaService.$disconnect();
@@ -142,20 +151,105 @@ describe('AuthController (e2e)', () => {
       });
   });
 
-  // it('/auth/logout - logout (POST)', async () => {
-  //   return request(app.getHttpServer())
-  //     .post('/auth/logout')
-  //     .expect(200)
-  //     .then(async () => {
-  //       const existRefreshInDB = await prismaService.refreshToken.findUnique({
-  //         where: {
-  //           userId_deviceId: {
-  //             userId: userInfo.userId,
-  //             deviceId: registrationDto.deviceId,
-  //           },
-  //         },
-  //       });
-  //       expect(existRefreshInDB).toBeNull();
-  //     });
-  // });
+  it('/auth/resend-verification - resends verification email (POST)', async () => {
+    return request(app.getHttpServer())
+      .post('/auth/resend-verification')
+      .send({ email: userInfo.email })
+      .expect(201)
+      .then(async ({ body }) => {
+        expect(body.success).toBe(true);
+
+        const tokenRecord = await prismaService.emailToken.findFirst({
+          where: { userId: userInfo.userId, type: EmailTokenType.VERIFY_EMAIL },
+        });
+
+        expect(tokenRecord).toBeDefined();
+        verifyEmailToken = tokenRecord.token;
+      });
+  });
+
+  it('/auth/resend-verification - unknown email returns success (POST)', async () => {
+    return request(app.getHttpServer())
+      .post('/auth/resend-verification')
+      .send({ email: 'nobody@example.com' })
+      .expect(201)
+      .then(({ body }) => {
+        expect(body.success).toBe(true);
+      });
+  });
+
+  it('/auth/verify-email - verifies email with valid token (POST)', async () => {
+    return request(app.getHttpServer())
+      .post('/auth/verify-email')
+      .send({ token: verifyEmailToken })
+      .expect(201)
+      .then(async ({ body }) => {
+        expect(body.success).toBe(true);
+
+        const user = await prismaService.user.findUnique({
+          where: { id: userInfo.userId },
+        });
+        expect(user.emailVerified).toBe(true);
+      });
+  });
+
+  it('/auth/verify-email - invalid token returns 400 (POST)', async () => {
+    return request(app.getHttpServer())
+      .post('/auth/verify-email')
+      .send({ token: 'invalid-token-xyz' })
+      .expect(400);
+  });
+
+  it('/auth/forgot-password - sends password reset email (POST)', async () => {
+    return request(app.getHttpServer())
+      .post('/auth/forgot-password')
+      .send({ email: userInfo.email })
+      .expect(201)
+      .then(async ({ body }) => {
+        expect(body.success).toBe(true);
+
+        const tokenRecord = await prismaService.emailToken.findFirst({
+          where: { userId: userInfo.userId, type: EmailTokenType.RESET_PASSWORD },
+        });
+
+        expect(tokenRecord).toBeDefined();
+        resetPasswordToken = tokenRecord.token;
+      });
+  });
+
+  it('/auth/forgot-password - unknown email returns success (POST)', async () => {
+    return request(app.getHttpServer())
+      .post('/auth/forgot-password')
+      .send({ email: 'nobody@example.com' })
+      .expect(201)
+      .then(({ body }) => {
+        expect(body.success).toBe(true);
+      });
+  });
+
+  it('/auth/reset-password - resets password with valid token (POST)', async () => {
+    const newPassword = 'newPassword456';
+
+    return request(app.getHttpServer())
+      .post('/auth/reset-password')
+      .send({ token: resetPasswordToken, newPassword })
+      .expect(201)
+      .then(async ({ body }) => {
+        expect(body.success).toBe(true);
+
+        const refreshTokens = await prismaService.refreshToken.findMany({
+          where: { userId: userInfo.userId },
+        });
+        expect(refreshTokens).toHaveLength(0);
+
+        userInfo.password = newPassword;
+      });
+  });
+
+  it('/auth/reset-password - invalid token returns 400 (POST)', async () => {
+    return request(app.getHttpServer())
+      .post('/auth/reset-password')
+      .send({ token: 'invalid-token-xyz', newPassword: 'somePassword123' })
+      .expect(400);
+  });
 });

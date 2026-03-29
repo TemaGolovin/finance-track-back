@@ -5,7 +5,8 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { InvitationStatus } from '@prisma/client';
+import { EmailTokenType, InvitationStatus } from '@prisma/client';
+import { MailService } from 'src/mail/mail.service';
 
 interface InvitationReceived {
   id: string;
@@ -73,7 +74,14 @@ describe('UserController (e2e)', () => {
           },
         },
       ],
-    }).compile();
+    })
+      .overrideProvider(MailService)
+      .useValue({
+        sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+        sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+        sendEmailChangeConfirmation: jest.fn().mockResolvedValue(undefined),
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
 
@@ -112,6 +120,7 @@ describe('UserController (e2e)', () => {
 
   afterAll(async () => {
     if (prismaService) {
+      await prismaService.emailToken.deleteMany({ where: { userId: mockUser.id } });
       await prismaService.invitation.deleteMany({ where: { groupId } });
       await prismaService.userRelationGroup.delete({ where: { id: groupId } });
       await prismaService.category.deleteMany({ where: { userId: mockUser.id } });
@@ -196,5 +205,54 @@ describe('UserController (e2e)', () => {
         expect(body.id).toBeDefined();
         expect(body.status).toBe(InvitationStatus.CANCELLED);
       });
+  });
+
+  it('/user/request-email-change (POST) - creates email change token', async () => {
+    return request(app.getHttpServer())
+      .post('/user/request-email-change')
+      .send({ newEmail: 'new-email-test@example.com' })
+      .expect(201)
+      .then(async ({ body }) => {
+        expect(body.success).toBe(true);
+
+        const tokenRecord = await prismaService.emailToken.findFirst({
+          where: { userId: mockUser.id, type: EmailTokenType.CHANGE_EMAIL },
+        });
+
+        expect(tokenRecord).toBeDefined();
+        expect(tokenRecord.newEmail).toBe('new-email-test@example.com');
+      });
+  });
+
+  it('/user/request-email-change (POST) - email already taken returns 409', async () => {
+    return request(app.getHttpServer())
+      .post('/user/request-email-change')
+      .send({ newEmail: userForFind.email })
+      .expect(409);
+  });
+
+  it('/user/confirm-email-change (POST) - changes email with valid token', async () => {
+    const tokenRecord = await prismaService.emailToken.findFirst({
+      where: { userId: mockUser.id, type: EmailTokenType.CHANGE_EMAIL },
+    });
+
+    return request(app.getHttpServer())
+      .post('/user/confirm-email-change')
+      .send({ token: tokenRecord.token })
+      .expect(201)
+      .then(async ({ body }) => {
+        expect(body.success).toBe(true);
+
+        const user = await prismaService.user.findUnique({ where: { id: mockUser.id } });
+        expect(user.email).toBe('new-email-test@example.com');
+        expect(user.emailVerified).toBe(true);
+      });
+  });
+
+  it('/user/confirm-email-change (POST) - invalid token returns 400', async () => {
+    return request(app.getHttpServer())
+      .post('/user/confirm-email-change')
+      .send({ token: 'invalid-token-xyz' })
+      .expect(400);
   });
 });
