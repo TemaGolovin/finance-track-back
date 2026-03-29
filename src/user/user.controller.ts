@@ -9,7 +9,9 @@ import {
 } from '@nestjs/swagger';
 import { InvitationStatus } from '@prisma/client';
 import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
+import { Public } from 'src/decorators/public.decorator';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
+import { ConfirmEmailChangeDto, RequestEmailChangeDto } from './dto/email-change.dto';
 import { InviteToGroupByUserIdsDto } from './dto/invite-to-group-by-name.dto';
 import { UpdateInvitationDto } from './dto/update-invitation.dto';
 import { InvitationEntity } from './entity/invitation.entity';
@@ -112,5 +114,19 @@ export class UserController {
     @Body() updateDto: UpdateInvitationDto,
   ) {
     return this.userService.updateInvitation(updateDto, invitationId, userInfo.id);
+  }
+
+  @Post('request-email-change')
+  requestEmailChange(
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+    @Body() dto: RequestEmailChangeDto,
+  ) {
+    return this.userService.requestEmailChange(userInfo.id, dto);
+  }
+
+  @Public()
+  @Post('confirm-email-change')
+  confirmEmailChange(@Body() dto: ConfirmEmailChangeDto) {
+    return this.userService.confirmEmailChange(dto);
   }
 }

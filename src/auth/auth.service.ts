@@ -6,14 +6,25 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { EmailTokenType } from '@prisma/client';
 import { compare, genSalt, hash } from 'bcryptjs';
 import { I18nService } from 'nestjs-i18n';
 import { tSafe } from 'src/i18n/t-safe';
 import { CategoryService } from 'src/category/category.service';
 import { ResponseWrapper } from 'src/constants/response-wrapper';
+import { EmailTokenService } from 'src/email-token/email-token.service';
+import { MailService } from 'src/mail/mail.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthRepository } from './auth.repository';
-import { ChangePasswordDto, LoginDto, RegistrationDto } from './dto/auth.dto';
+import {
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  LoginDto,
+  RegistrationDto,
+  ResendVerificationDto,
+  ResetPasswordDto,
+  VerifyEmailDto,
+} from './dto/auth.dto';
 import { RegistrationEntity } from './entity/registration.entity';
 
 @Injectable()
@@ -24,6 +35,8 @@ export class AuthService {
     private readonly authRepository: AuthRepository,
     private readonly categoryService: CategoryService,
     private readonly i18n: I18nService,
+    private readonly emailTokenService: EmailTokenService,
+    private readonly mailService: MailService,
   ) {}
 
   async registration(
@@ -46,6 +59,14 @@ export class AuthService {
     });
 
     await this.categoryService.createDefaultCategories(newUser.id, groupId);
+
+    const emailToken = await this.emailTokenService.createToken(
+      newUser.id,
+      EmailTokenType.VERIFY_EMAIL,
+    );
+    void this.mailService
+      .sendVerificationEmail(newUser.email, newUser.name, emailToken.token)
+      .catch(() => null);
 
     const { password, ...userData } = newUser;
 
@@ -160,7 +181,7 @@ export class AuthService {
   async me(user: { id: string }) {
     const dbUser = await this.prisma.user.findUnique({
       where: { id: user.id },
-      select: { id: true, email: true, name: true },
+      select: { id: true, email: true, name: true, emailVerified: true },
     });
 
     if (!dbUser) {
@@ -290,6 +311,75 @@ export class AuthService {
         }),
       );
     }
+
+    return { success: true };
+  }
+
+  async verifyEmail(dto: VerifyEmailDto) {
+    const record = await this.emailTokenService.findValidToken(
+      dto.token,
+      EmailTokenType.VERIFY_EMAIL,
+    );
+
+    await this.prisma.user.update({
+      where: { id: record.userId },
+      data: { emailVerified: true },
+    });
+
+    await this.emailTokenService.deleteToken(record.id);
+
+    return { success: true };
+  }
+
+  async resendVerification(dto: ResendVerificationDto) {
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+
+    if (user && !user.emailVerified) {
+      const emailToken = await this.emailTokenService.createToken(
+        user.id,
+        EmailTokenType.VERIFY_EMAIL,
+      );
+      void this.mailService
+        .sendVerificationEmail(user.email, user.name, emailToken.token)
+        .catch(() => null);
+    }
+
+    return { success: true };
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+
+    if (user) {
+      const emailToken = await this.emailTokenService.createToken(
+        user.id,
+        EmailTokenType.RESET_PASSWORD,
+      );
+      void this.mailService
+        .sendPasswordResetEmail(user.email, user.name, emailToken.token)
+        .catch(() => null);
+    }
+
+    return { success: true };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const record = await this.emailTokenService.findValidToken(
+      dto.token,
+      EmailTokenType.RESET_PASSWORD,
+    );
+
+    const salt = await genSalt(10);
+    const hashPassword = await hash(dto.newPassword, salt);
+
+    await this.prisma.user.update({
+      where: { id: record.userId },
+      data: { password: hashPassword },
+    });
+
+    await this.emailTokenService.deleteToken(record.id);
+
+    await this.prisma.refreshToken.deleteMany({ where: { userId: record.userId } });
 
     return { success: true };
   }

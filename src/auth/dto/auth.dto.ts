@@ -108,3 +108,34 @@ export class ChangePasswordDto {
   @ApiProperty({ description: 'new password', required: true })
   newPassword: string;
 }
+
+export class VerifyEmailDto {
+  @IsString()
+  @ApiProperty({ description: 'email verification token', required: true })
+  token: string;
+}
+
+export class ResendVerificationDto {
+  @IsEmail()
+  @ApiProperty({ description: 'email address to resend verification to', required: true })
+  email: string;
+}
+
+export class ForgotPasswordDto {
+  @IsEmail()
+  @ApiProperty({ description: 'email address to send reset link to', required: true })
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @IsString()
+  @ApiProperty({ description: 'reset password token', required: true })
+  token: string;
+
+  @IsString()
+  @MinLength(6, {
+    message: i18nValidationMessage('validation.PASSWORD_MIN_LENGTH'),
+  })
+  @ApiProperty({ description: 'new password', required: true })
+  newPassword: string;
+}

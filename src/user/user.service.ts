@@ -4,9 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InvitationStatus } from '@prisma/client';
+import { EmailTokenType, InvitationStatus } from '@prisma/client';
 import { I18nService } from 'nestjs-i18n';
+import { EmailTokenService } from 'src/email-token/email-token.service';
+import { MailService } from 'src/mail/mail.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { UserGroupService } from 'src/user-group/user-group.service';
+import { ConfirmEmailChangeDto, RequestEmailChangeDto } from './dto/email-change.dto';
 import { InviteToGroupByUserIdsDto } from './dto/invite-to-group-by-name.dto';
 import { UpdateInvitationDto } from './dto/update-invitation.dto';
 import { UserRepository } from './user.repository';
@@ -17,7 +21,70 @@ export class UserService {
     private readonly userRepository: UserRepository,
     private readonly userGroupService: UserGroupService,
     private readonly i18n: I18nService,
+    private readonly emailTokenService: EmailTokenService,
+    private readonly mailService: MailService,
+    private readonly prisma: PrismaService,
   ) {}
+
+  async requestEmailChange(userId: string, dto: RequestEmailChangeDto) {
+    const existing = await this.prisma.user.findUnique({ where: { email: dto.newEmail } });
+    if (existing) {
+      throw new ConflictException(
+        this.i18n.t('errors.ALREADY_EXISTS', {
+          args: { entity: 'user', fieldName: 'email', fieldValue: dto.newEmail },
+        }),
+      );
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', { args: { entity: 'user', id: userId, fieldName: 'id' } }),
+      );
+    }
+
+    const emailToken = await this.emailTokenService.createToken(
+      userId,
+      EmailTokenType.CHANGE_EMAIL,
+      dto.newEmail,
+    );
+
+    void this.mailService
+      .sendEmailChangeConfirmation(dto.newEmail, user.name, emailToken.token)
+      .catch(() => null);
+
+    return { success: true };
+  }
+
+  async confirmEmailChange(dto: ConfirmEmailChangeDto) {
+    const record = await this.emailTokenService.findValidToken(
+      dto.token,
+      EmailTokenType.CHANGE_EMAIL,
+    );
+
+    if (!record.newEmail) {
+      throw new ConflictException('Invalid token data');
+    }
+
+    const existing = await this.prisma.user.findUnique({ where: { email: record.newEmail } });
+    if (existing) {
+      throw new ConflictException(
+        this.i18n.t('errors.ALREADY_EXISTS', {
+          args: { entity: 'user', fieldName: 'email', fieldValue: record.newEmail },
+        }),
+      );
+    }
+
+    await this.prisma.user.update({
+      where: { id: record.userId },
+      data: { email: record.newEmail, emailVerified: true },
+    });
+
+    await this.emailTokenService.deleteToken(record.id);
+
+    return { success: true };
+  }
+
   async findUsersByUsername(username: string, userId: string) {
     return await this.userRepository.findUsersByUsername(username, userId);
   }

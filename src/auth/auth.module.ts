@@ -9,6 +9,8 @@ import { RefreshTokenStrategy } from './strategies/refresh-jwt.strategy';
 import { AuthRepository } from './auth.repository';
 import { CategoryService } from 'src/category/category.service';
 import { CategoryRepository } from 'src/category/category.repository';
+import { MailModule } from 'src/mail/mail.module';
+import { EmailTokenModule } from 'src/email-token/email-token.module';
 
 @Module({
   imports: [
@@ -16,6 +18,8 @@ import { CategoryRepository } from 'src/category/category.repository';
       useFactory: getJWTConfig,
     }),
     PassportModule,
+    MailModule,
+    EmailTokenModule,
   ],
   controllers: [AuthController],
   providers: [

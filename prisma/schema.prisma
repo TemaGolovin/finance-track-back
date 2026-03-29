@@ -19,6 +19,7 @@ model User {
   name                    String                  @unique()
   email                   String                  @unique()
   password                String
+  emailVerified           Boolean                 @default(false)
   createAt                DateTime                @default(now())
   updateAt                DateTime                @updatedAt()
   operations              Operation[]
@@ -29,6 +30,7 @@ model User {
   receivedInvitations     Invitation[]            @relation("ReceivedInvitations")
   groupCreator            UserRelationGroup[]
   categoryGroupMapping    PersonalCategoryMap[]
+  emailTokens             EmailToken[]
 }
 
 model UserRelationGroup {
@@ -153,4 +155,21 @@ enum InvitationStatus {
   ACCEPTED
   DECLINED
   CANCELLED
+}
+
+model EmailToken {
+  id        String         @id @default(uuid())
+  token     String         @unique @default(uuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      EmailTokenType
+  newEmail  String?
+  expiresAt DateTime
+  createdAt DateTime       @default(now())
+}
+
+enum EmailTokenType {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+  CHANGE_EMAIL
 }

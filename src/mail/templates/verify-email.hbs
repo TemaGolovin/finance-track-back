@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Подтверждение email</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 560px; margin: 40px auto; background: #fff; border-radius: 8px; padding: 40px; }
+    h1 { color: #111; font-size: 22px; margin-bottom: 16px; }
+    p { color: #444; line-height: 1.6; }
+    .btn { display: inline-block; margin-top: 24px; padding: 12px 28px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; font-weight: bold; }
+    .footer { margin-top: 32px; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Привет, {{name}}!</h1>
+    <p>Спасибо за регистрацию в <strong>Finance Track</strong>. Пожалуйста, подтвердите ваш email, нажав на кнопку ниже.</p>
+    <a href="{{url}}" class="btn">Подтвердить email</a>
+    <p class="footer">Ссылка действительна 24 часа. Если вы не регистрировались — просто проигнорируйте это письмо.</p>
+  </div>
+</body>
+</html>
