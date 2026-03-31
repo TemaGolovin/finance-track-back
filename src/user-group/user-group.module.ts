@@ -8,5 +8,6 @@ import { CategoryRepository } from 'src/category/category.repository';
 @Module({
   controllers: [UserGroupController],
   providers: [UserGroupService, UserGroupRepository, CategoryService, CategoryRepository],
+  exports: [UserGroupService, UserGroupRepository],
 })
 export class UserGroupModule {}

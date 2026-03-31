@@ -43,8 +43,11 @@ export class CategoryController {
   @Get(':id')
   @ApiOkResponse({ type: CreateCategoryResponseEntity })
   @ApiNotFoundResponse({ description: 'Category not found', type: TemplateErrorResponse })
-  getCategory(@Param('id') id: string) {
-    return this.categoryService.findUniqueById(id);
+  getCategory(
+    @Param('id') id: string,
+    @UserInfo() userInfo: { email: string; name: string; id: string },
+  ) {
+    return this.categoryService.getCategoryByIdForUser(id, userInfo.id);
   }
 
   @Post()

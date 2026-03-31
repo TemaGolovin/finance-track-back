@@ -23,9 +23,9 @@ export class CategoryRepository {
     });
   }
 
-  async findUniqueById(id: string) {
-    return await this.prisma.category.findUnique({
-      where: { id },
+  async findFirstByIdAndUserId(id: string, userId: string) {
+    return await this.prisma.category.findFirst({
+      where: { id, userId },
     });
   }
 
@@ -49,12 +49,18 @@ export class CategoryRepository {
     });
   }
 
-  async updateCategory(id: string, categoryDto: UpdateCategoryDto) {
-    return await this.prisma.category.update({
-      where: { id },
+  async updateCategory(id: string, userId: string, categoryDto: UpdateCategoryDto) {
+    const result = await this.prisma.category.updateMany({
+      where: { id, userId },
       data: {
         name: categoryDto.name.toLowerCase(),
       },
+    });
+    if (result.count === 0) {
+      return null;
+    }
+    return await this.prisma.category.findUnique({
+      where: { id },
     });
   }
 

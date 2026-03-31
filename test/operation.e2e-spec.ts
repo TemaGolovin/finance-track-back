@@ -122,7 +122,7 @@ describe('OperationController (e2e)', () => {
   it('/operation/:id - update operation by id (PUT)', async () => {
     return request(app.getHttpServer())
       .put(`/operation/${createdOperationId}`)
-      .send(testUpdateDto)
+      .send({ ...testUpdateDto, categoryId: createdCategoryId })
       .expect(200)
       .then(({ body }: { body: CreateOperationDto }) => {
         expect(body.comment).toBe(testUpdateDto.comment);

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Operation, Prisma } from '@prisma/client';
 import { I18nService } from 'nestjs-i18n';
 import { CategoryService } from 'src/category/category.service';
+import { UserGroupRepository } from 'src/user-group/user-group.repository';
 import { CreateOperationDto } from './dto';
 import { OperationRepository } from './operation.repository';
 
@@ -9,6 +10,7 @@ import { OperationRepository } from './operation.repository';
 export class OperationService {
   constructor(
     private readonly operationRepository: OperationRepository,
+    private readonly userGroupRepository: UserGroupRepository,
     private readonly categoryService: CategoryService,
     private readonly i18n: I18nService,
   ) {}
@@ -59,8 +61,51 @@ export class OperationService {
     };
   }
 
-  async getOperationById(id: string) {
-    const operation = await this.operationRepository.findUniqueById(id);
+  async getOperationById(id: string, userId: string) {
+    const ownOperation = await this.operationRepository.findFirstByIdAndUserId(id, userId);
+
+    if (ownOperation) {
+      return ownOperation;
+    }
+
+    const groupVisibleOperation =
+      await this.userGroupRepository.findOperationByIdVisibleToGroupMember(id, userId);
+
+    if (groupVisibleOperation) {
+      return groupVisibleOperation;
+    }
+
+    throw new NotFoundException(
+      this.i18n.t('errors.NOT_FOUND', {
+        args: { entity: 'Operation', id, fieldName: 'id' },
+      }),
+    );
+  }
+
+  async createOperation(createOperationDto: CreateOperationDto, userId: string) {
+    await this.categoryService.requireCategoryForUser(createOperationDto.categoryId, userId);
+
+    return await this.operationRepository.createOperation(createOperationDto, userId);
+  }
+
+  async updateOperation(id: string, createOperationDto: CreateOperationDto, userId: string) {
+    const existing = await this.operationRepository.findFirstByIdAndUserId(id, userId);
+
+    if (!existing) {
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', {
+          args: { entity: 'Operation', id, fieldName: 'id' },
+        }),
+      );
+    }
+
+    await this.categoryService.requireCategoryForUser(createOperationDto.categoryId, userId);
+
+    const operation = await this.operationRepository.updateOperation(
+      id,
+      userId,
+      createOperationDto,
+    );
 
     if (!operation) {
       throw new NotFoundException(
@@ -73,45 +118,17 @@ export class OperationService {
     return operation;
   }
 
-  async createOperation(createOperationDto: CreateOperationDto, userId: string) {
-    const category = await this.categoryService.findUniqueById(createOperationDto.categoryId);
+  async deleteOperation(id: string, userId: string) {
+    const deleted = await this.operationRepository.deleteOperation(id, userId);
 
-    if (!category) {
-      throw new NotFoundException(
-        this.i18n.t('errors.NOT_FOUND', {
-          args: {
-            entity: 'Category',
-            id: createOperationDto.categoryId,
-            fieldName: 'id',
-          },
-        }),
-      );
-    }
-
-    return await this.operationRepository.createOperation(createOperationDto, userId);
-  }
-
-  async updateOperation(id: string, createOperationDto: CreateOperationDto) {
-    await this.validateOperationExists(id);
-
-    return this.operationRepository.updateOperation(id, createOperationDto);
-  }
-
-  async deleteOperation(id: string) {
-    await this.validateOperationExists(id);
-
-    return await this.operationRepository.deleteOperation(id);
-  }
-
-  async validateOperationExists(id: string): Promise<void> {
-    const operation = await this.operationRepository.findUniqueById(id);
-
-    if (!operation) {
+    if (!deleted) {
       throw new NotFoundException(
         this.i18n.t('errors.NOT_FOUND', {
           args: { entity: 'Operation', id, fieldName: 'id' },
         }),
       );
     }
+
+    return deleted;
   }
 }

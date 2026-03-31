@@ -44,7 +44,7 @@ export class CategoryService {
   }
 
   async updateCategory(id: string, categoryDto: UpdateCategoryDto, userId: string) {
-    await this.validateCategoryExists(id);
+    await this.validateCategoryExists(id, userId);
 
     const categoryExists = await this.categoryRepository.findUniqueWithNotId(
       categoryDto.name,
@@ -65,13 +65,21 @@ export class CategoryService {
       );
     }
 
-    const category = await this.categoryRepository.updateCategory(id, categoryDto);
+    const category = await this.categoryRepository.updateCategory(id, userId, categoryDto);
+
+    if (!category) {
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', {
+          args: { entity: 'Category', id, fieldName: 'id' },
+        }),
+      );
+    }
 
     return category;
   }
 
   async deleteCategory(id: string, userId: string) {
-    await this.validateCategoryExists(id);
+    await this.validateCategoryExists(id, userId);
 
     const category = await this.categoryRepository.deleteCategory(id, userId);
 
@@ -144,8 +152,8 @@ export class CategoryService {
     };
   }
 
-  async validateCategoryExists(id: string): Promise<void> {
-    const category = await this.findUniqueById(id);
+  async validateCategoryExists(id: string, userId: string): Promise<void> {
+    const category = await this.categoryRepository.findFirstByIdAndUserId(id, userId);
 
     if (!category) {
       throw new NotFoundException(
@@ -154,6 +162,34 @@ export class CategoryService {
         }),
       );
     }
+  }
+
+  async requireCategoryForUser(categoryId: string, userId: string) {
+    const category = await this.categoryRepository.findFirstByIdAndUserId(categoryId, userId);
+
+    if (!category) {
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', {
+          args: { entity: 'Category', id: categoryId, fieldName: 'id' },
+        }),
+      );
+    }
+
+    return category;
+  }
+
+  async getCategoryByIdForUser(id: string, userId: string) {
+    const category = await this.categoryRepository.findFirstByIdAndUserId(id, userId);
+
+    if (!category) {
+      throw new NotFoundException(
+        this.i18n.t('errors.NOT_FOUND', {
+          args: { entity: 'Category', id, fieldName: 'id' },
+        }),
+      );
+    }
+
+    return category;
   }
 
   async createDefaultCategories(userId: string, groupId?: string) {
@@ -169,7 +205,4 @@ export class CategoryService {
     return await this.categoryRepository.createDefaultsCategories(data);
   }
 
-  async findUniqueById(id: string) {
-    return await this.categoryRepository.findUniqueById(id);
-  }
 }

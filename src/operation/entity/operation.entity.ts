@@ -1,5 +1,14 @@
 import { ApiProperty, OmitType } from '@nestjs/swagger';
 
+class OperationAuthor {
+  @ApiProperty({
+    description: 'Author display name',
+    example: 'alice',
+    type: String,
+  })
+  name: string;
+}
+
 class CategoryForOperation {
   @ApiProperty({
     description: 'Category name',
@@ -95,6 +104,13 @@ export class OperationEntity {
     type: String,
   })
   userId: string;
+
+  @ApiProperty({
+    description: 'Operation author (included in detail responses)',
+    required: false,
+    type: OperationAuthor,
+  })
+  user?: OperationAuthor;
 
   @ApiProperty({
     description: 'Operation category',

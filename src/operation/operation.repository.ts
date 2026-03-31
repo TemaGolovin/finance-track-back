@@ -52,22 +52,57 @@ export class OperationRepository {
     });
   }
 
-  updateOperation(id: string, operationDto: CreateOperationDto) {
-    return this.prisma.operation.update({
-      where: { id },
-      data: operationDto,
+  updateOperation(id: string, userId: string, operationDto: CreateOperationDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.operation.updateMany({
+        where: { id, userId },
+        data: operationDto,
+      });
+      if (updated.count === 0) {
+        return null;
+      }
+      return tx.operation.findFirst({
+        where: { id, userId },
+        include: {
+          category: {
+            select: {
+              name: true,
+              color: true,
+              icon: true,
+            },
+          },
+          user: { select: { name: true } },
+        },
+      });
     });
   }
 
-  deleteOperation(id: string) {
-    return this.prisma.operation.delete({
-      where: { id },
+  deleteOperation(id: string, userId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.operation.findFirst({
+        where: { id, userId },
+        include: {
+          category: {
+            select: {
+              name: true,
+              color: true,
+              icon: true,
+            },
+          },
+          user: { select: { name: true } },
+        },
+      });
+      if (!existing) {
+        return null;
+      }
+      await tx.operation.delete({ where: { id } });
+      return existing;
     });
   }
 
-  findUniqueById(id: string) {
-    return this.prisma.operation.findUnique({
-      where: { id },
+  findFirstByIdAndUserId(id: string, userId: string) {
+    return this.prisma.operation.findFirst({
+      where: { id, userId },
       include: {
         category: {
           select: {
@@ -76,6 +111,7 @@ export class OperationRepository {
             icon: true,
           },
         },
+        user: { select: { name: true } },
       },
     });
   }

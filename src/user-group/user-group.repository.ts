@@ -315,6 +315,43 @@ export class UserGroupRepository {
     });
   }
 
+  /** Same visibility rules as getUserGroupOperations (mapped personal category + shared group). */
+  async findOperationByIdVisibleToGroupMember(operationId: string, viewerUserId: string) {
+    const memberships = await this.prisma.userRelationGroupUser.findMany({
+      where: { userId: viewerUserId },
+      select: { userRelationGroupId: true },
+    });
+    const groupIds = memberships.map((m) => m.userRelationGroupId);
+    if (groupIds.length === 0) {
+      return null;
+    }
+
+    return this.prisma.operation.findFirst({
+      where: {
+        id: operationId,
+        category: {
+          groupsMapping: {
+            some: {
+              groupCategory: {
+                groupId: { in: groupIds },
+              },
+            },
+          },
+        },
+      },
+      include: {
+        category: {
+          select: {
+            name: true,
+            color: true,
+            icon: true,
+          },
+        },
+        user: { select: { name: true } },
+      },
+    });
+  }
+
   async connectGroupCategoriesToPersonalCategories(
     relatedCategories: { personalCategoryId: string | null; groupCategoryId: string }[],
     userId: string,
