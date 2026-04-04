@@ -7,5 +7,6 @@
   "UNAUTHORIZED": "Unauthorized",
   "INVALID_DATE": "Invalid date",
   "INVALID_TOKEN": "Invalid or expired token",
-  "TOKEN_EXPIRED": "Token has expired"
+  "TOKEN_EXPIRED": "Token has expired",
+  "WRONG_PASSWORD": "Wrong password"
 }

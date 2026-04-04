@@ -18,6 +18,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthRepository } from './auth.repository';
 import {
   ChangePasswordDto,
+  DeleteAccountDto,
   ForgotPasswordDto,
   LoginDto,
   RegistrationDto,
@@ -380,6 +381,51 @@ export class AuthService {
     await this.emailTokenService.deleteToken(record.id);
 
     await this.prisma.refreshToken.deleteMany({ where: { userId: record.userId } });
+
+    return { success: true };
+  }
+
+  async deleteAccount(userId: string, dto: DeleteAccountDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new UnauthorizedException(tSafe('errors.UNAUTHORIZED', 'en'));
+    }
+
+    const isValid = await compare(dto.password, user.password);
+    if (!isValid) {
+      throw new UnauthorizedException(this.i18n.t('errors.WRONG_PASSWORD'));
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.personalCategoryMap.deleteMany({ where: { userId } });
+      await tx.operation.deleteMany({ where: { userId } });
+      await tx.category.deleteMany({ where: { userId } });
+      await tx.invitation.deleteMany({
+        where: { OR: [{ senderId: userId }, { recipientId: userId }] },
+      });
+      await tx.userRelationGroupUser.deleteMany({ where: { userId } });
+
+      const createdGroups = await tx.userRelationGroup.findMany({
+        where: { creatorId: userId },
+        include: { users: { take: 1 } },
+      });
+
+      for (const group of createdGroups) {
+        if (group.users.length > 0) {
+          await tx.userRelationGroup.update({
+            where: { id: group.id },
+            data: { creatorId: group.users[0].userId },
+          });
+        } else {
+          await tx.userRelationGroup.delete({ where: { id: group.id } });
+        }
+      }
+
+      await tx.refreshToken.deleteMany({ where: { userId } });
+      await tx.emailToken.deleteMany({ where: { userId } });
+      await tx.user.delete({ where: { id: userId } });
+    });
 
     return { success: true };
   }

@@ -139,3 +139,9 @@ export class ResetPasswordDto {
   @ApiProperty({ description: 'new password', required: true })
   newPassword: string;
 }
+
+export class DeleteAccountDto {
+  @IsString()
+  @ApiProperty({ description: 'current password for confirmation', required: true })
+  password: string;
+}

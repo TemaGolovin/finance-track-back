@@ -14,6 +14,7 @@ import {
 import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
+  DeleteAccountDto,
   ForgotPasswordDto,
   LoginDto,
   RegistrationDto,
@@ -226,5 +227,21 @@ export class AuthController {
   @Post('reset-password')
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
+  }
+
+  @Post('delete-account')
+  @ApiOkResponse({
+    description: 'account deleted',
+    content: { 'application/json': { example: { success: true } } },
+  })
+  async deleteAccount(
+    @Res() response: Response,
+    @Body() dto: DeleteAccountDto,
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+  ) {
+    await this.authService.deleteAccount(userInfo.id, dto);
+    response.clearCookie('refreshToken');
+    response.clearCookie('accessToken');
+    return response.status(200).json({ success: true });
   }
 }
