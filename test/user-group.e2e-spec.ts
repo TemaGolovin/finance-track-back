@@ -185,6 +185,26 @@ describe('UserGroupController (e2e)', () => {
       });
   });
 
+  it('/user-group/:id (PATCH) - update user group - success', async () => {
+    return request(app.getHttpServer())
+      .patch(`/user-group/${userGroupId}`)
+      .send({ name: 'Updated Group' })
+      .expect(200)
+      .then(({ body }) => {
+        expect(body).toBeDefined();
+        expect(body.id).toBe(userGroupId);
+        expect(body.name).toBe('Updated Group');
+        expect(body.creatorId).toBe(mockUser.id);
+      });
+  });
+
+  it('/user-group/:id (PATCH) - update user group - not found', async () => {
+    return request(app.getHttpServer())
+      .patch('/user-group/random-id')
+      .send({ name: 'Updated Group' })
+      .expect(404);
+  });
+
   it('/user-group/:id (DELETE) - delete user group - success', async () => {
     return request(app.getHttpServer())
       .delete(`/user-group/${userGroupId}`)

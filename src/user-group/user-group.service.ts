@@ -12,6 +12,7 @@ import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
 import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
 import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
+import { UpdateUserGroupDto } from './dto/update-user-group.dto';
 import { UserGroupRepository } from './user-group.repository';
 
 @Injectable()
@@ -195,6 +196,26 @@ export class UserGroupService {
       operationsByDate,
       totalSum,
     };
+  }
+
+  async update(id: string, dto: UpdateUserGroupDto, userId: string) {
+    const group = await this.userGroupRepository.getUserGroupById(id, userId);
+
+    if (!group) {
+      throw new NotFoundException(this.notFound('Group', id));
+    }
+
+    const userMemberInGroup = group.users.find((user) => user.user.id === userId);
+
+    if (!userMemberInGroup) {
+      throw new NotFoundException(this.notFound('Group', id));
+    }
+
+    if (group.creatorId !== userId) {
+      throw new ForbiddenException(this.i18n.t('userGroup.FORBIDDEN_UPDATE'));
+    }
+
+    return this.userGroupRepository.updateUserGroup(id, dto);
   }
 
   async removeMember(groupId: string, memberId: string, requesterId: string) {

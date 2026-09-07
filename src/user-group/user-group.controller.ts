@@ -13,6 +13,7 @@ import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
 import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
 import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
+import { UpdateUserGroupDto } from './dto/update-user-group.dto';
 import { UserGroupEntity } from './entities/user-group.entity';
 import { UserGroupService } from './user-group.service';
 
@@ -56,6 +57,30 @@ export class UserGroupController {
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
     return this.userGroupService.findOne(id, userInfo.id);
+  }
+
+  @Patch(':id')
+  @ApiOkResponse({ type: UserGroupEntity })
+  @ApiNotFoundResponse({
+    example: {
+      message: 'Group with id UUID not found',
+      statusCode: 404,
+      error: 'Not Found',
+    },
+  })
+  @ApiForbiddenResponse({
+    example: {
+      message: 'Only the group creator can update the group',
+      statusCode: 403,
+      error: 'Forbidden',
+    },
+  })
+  update(
+    @Param('id') id: string,
+    @Body() updateUserGroupDto: UpdateUserGroupDto,
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+  ) {
+    return this.userGroupService.update(id, updateUserGroupDto, userInfo.id);
   }
 
   @Get(':groupId/stat')

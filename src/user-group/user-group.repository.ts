@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
 import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
 import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
+import { UpdateUserGroupDto } from './dto/update-user-group.dto';
 import { Category, OperationType, Prisma } from '@prisma/client';
 
 @Injectable()
@@ -191,6 +192,40 @@ export class UserGroupRepository {
       );
   }
 
+  async updateUserGroup(groupId: string, dto: UpdateUserGroupDto) {
+    return await this.prisma.userRelationGroup.update({
+      where: {
+        id: groupId,
+      },
+      data: {
+        name: dto.name,
+      },
+      select: {
+        id: true,
+        name: true,
+        creatorId: true,
+        createAt: true,
+        updateAt: true,
+        creator: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        users: {
+          select: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
   async deleteUserGroup(groupId: string) {
     return await this.prisma.userRelationGroup.delete({
       where: {
@@ -360,7 +395,7 @@ export class UserGroupRepository {
     const disconnects = relatedCategories.filter((r) => !r.personalCategoryId);
     const connects = relatedCategories.filter((r) => r.personalCategoryId);
 
-    const personalIdsInPayload = [...new Set(connects.map((r) => r.personalCategoryId!))];
+    const personalIdsInPayload = [...new Set(connects.map((r) => r.personalCategoryId))];
 
     return this.prisma.$transaction(async (tx) => {
       if (disconnects.length > 0) {
@@ -398,11 +433,11 @@ export class UserGroupRepository {
                 },
                 create: {
                   userId,
-                  categoryId: category.personalCategoryId!,
+                  categoryId: category.personalCategoryId,
                   groupId,
                 },
                 update: {
-                  categoryId: category.personalCategoryId!,
+                  categoryId: category.personalCategoryId,
                   groupId,
                 },
               },

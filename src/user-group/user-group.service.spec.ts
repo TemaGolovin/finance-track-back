@@ -1,4 +1,5 @@
-import { HttpStatus, NotFoundException } from '@nestjs/common';
+/// <reference types="jest" />
+import { ForbiddenException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma } from '@prisma/client';
 import { I18nService } from 'nestjs-i18n';
@@ -56,9 +57,12 @@ describe('UserGroupService', () => {
     removeUserFromGroup: jest.fn(),
     connectGroupCategoriesToPersonalCategories: jest.fn(),
     getUserGroupStat: jest.fn(),
+    updateUserGroup: jest.fn(),
   };
 
   beforeEach(async () => {
+    jest.clearAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserGroupService,
@@ -190,9 +194,39 @@ describe('UserGroupService', () => {
       });
     } catch (error) {
       expect(error).toBeInstanceOf(NotFoundException);
-      expect(error.getStatus()).toBe(HttpStatus.NOT_FOUND);
-      expect(error.getResponse().message).toBe('Group with id 1 not found');
+      if (error instanceof NotFoundException) {
+        expect(error.getStatus()).toBe(HttpStatus.NOT_FOUND);
+        expect(error.message).toBe('Group with id 1 not found');
+      }
     }
+  });
+
+  it('update method - success when requester is creator', async () => {
+    const updatedGroup = { ...existedUserGroup, name: 'updated' };
+    userGroupRepositoryMock.getUserGroupById.mockResolvedValue(existedUserGroup);
+    userGroupRepositoryMock.updateUserGroup.mockResolvedValue(updatedGroup);
+
+    const result = await service.update('1', { name: 'updated' }, '2');
+
+    expect(result).toEqual(updatedGroup);
+    expect(userGroupRepositoryMock.updateUserGroup).toHaveBeenCalledWith('1', { name: 'updated' });
+  });
+
+  it('update method when group not found - fail', async () => {
+    userGroupRepositoryMock.getUserGroupById.mockResolvedValue(null);
+
+    await expect(service.update('1', { name: 'updated' }, '2')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(userGroupRepositoryMock.updateUserGroup).not.toHaveBeenCalled();
+  });
+
+  it('update method when requester is not creator - fail', async () => {
+    userGroupRepositoryMock.getUserGroupById.mockResolvedValue(existedUserGroup);
+
+    await expect(service.update('1', { name: 'updated' }, '1')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 
   it('getUserGroupStat method when member in group not found - fail', async () => {
@@ -208,8 +242,10 @@ describe('UserGroupService', () => {
       });
     } catch (error) {
       expect(error).toBeInstanceOf(NotFoundException);
-      expect(error.getStatus()).toBe(HttpStatus.NOT_FOUND);
-      expect(error.getResponse().message).toBe('Group with id 1 not found');
+      if (error instanceof NotFoundException) {
+        expect(error.getStatus()).toBe(HttpStatus.NOT_FOUND);
+        expect(error.message).toBe('Group with id 1 not found');
+      }
     }
   });
 });
