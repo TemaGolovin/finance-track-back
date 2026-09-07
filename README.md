@@ -4,7 +4,7 @@ REST API for shared family or group income and expense tracking: users, JWT, ref
 
 **Related repository:** [finance-track-front](../finance-track-front) — Next.js client.
 
-**Roadmap and backlog (product context):** [finance-track-front/docs/ROADMAP.md](../finance-track-front/docs/ROADMAP.md).
+**Roadmap and backlog (product context):** [finance-track-front/docs/ROADMAP.md](../finance-track-front/docs/ROADMAP.md). Completed work: [DONE.md](../finance-track-front/docs/DONE.md).
 
 OpenAPI (Swagger) docs: after the server starts, open `http://localhost:<PORT>/api` (path configured in `src/main.ts`).
 
