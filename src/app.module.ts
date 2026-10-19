@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { CategoryModule } from './category/category.module';
+import { HealthModule } from './health/health.module';
 import { I18nAppModule } from './i18n/i18n-app.module';
 import { OperationModule } from './operation/operation.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -11,6 +12,7 @@ import { UserModule } from './user/user.module';
 @Module({
   imports: [
     I18nAppModule,
+    HealthModule,
     OperationModule,
     PrismaModule,
     CategoryModule,
