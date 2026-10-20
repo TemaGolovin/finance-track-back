@@ -6,6 +6,8 @@ REST API for shared family or group income and expense tracking: users, JWT, ref
 
 **Roadmap and backlog (product context):** [finance-track-front/docs/ROADMAP.md](../finance-track-front/docs/ROADMAP.md). Completed work: [DONE.md](../finance-track-front/docs/DONE.md).
 
+**Backend tech debt (refactoring):** [docs/TECH_DEBT.md](./docs/TECH_DEBT.md).
+
 OpenAPI (Swagger) docs: after the server starts, open `http://localhost:<PORT>/api` (path configured in `src/main.ts`).
 
 ## Stack
