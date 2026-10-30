@@ -81,6 +81,12 @@ On the frontend, set `NEXT_API_BACKEND` and `NEXT_PUBLIC_API_BFF` to `http://loc
 | `pnpm db:seed` | Prisma seed |
 | `pnpm studio` | Prisma Studio |
 
+## Docker (production VPS)
+
+Full stack (Postgres, API, Next.js, nginx): [docs/DEPLOY.md](./docs/DEPLOY.md), `docker compose -f docker-compose.prod.yml up -d --build`.
+
+Local API + DB only: `docker compose up -d` (API on host port **3001**).
+
 ## License
 
 Private project (`UNLICENSED` in `package.json`).
