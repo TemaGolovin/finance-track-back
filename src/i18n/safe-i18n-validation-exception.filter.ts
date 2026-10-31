@@ -1,6 +1,7 @@
 import { ArgumentsHost, Catch, ExceptionFilter, Injectable } from '@nestjs/common';
 import { I18nService, I18nValidationException } from 'nestjs-i18n';
 import { formatI18nErrors } from 'nestjs-i18n/dist/utils/util';
+import { sanitizeValidationErrors } from './sanitize-validation-errors';
 
 const FALLBACK_I18N_LANG = 'en';
 
@@ -14,9 +15,10 @@ export class SafeI18nValidationExceptionFilter implements ExceptionFilter {
     const lang = request.i18nLang ?? FALLBACK_I18N_LANG;
     const i18nService = this.i18n;
 
-    const message = formatI18nErrors(exception.errors ?? [], i18nService, {
+    const formattedErrors = formatI18nErrors(exception.errors ?? [], i18nService, {
       lang,
     });
+    const message = sanitizeValidationErrors(formattedErrors);
 
     if (host.getType() === 'http') {
       const response = host.switchToHttp().getResponse();
