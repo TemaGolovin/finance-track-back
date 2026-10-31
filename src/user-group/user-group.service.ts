@@ -299,10 +299,31 @@ export class UserGroupService {
     }
 
     const userCategories = await this.categoryService.getCategories(userId);
-    const ownedCategoryIds = new Set(userCategories.map((c) => c.id));
+    const personalCategoryById = new Map(userCategories.map((c) => [c.id, c]));
     for (const personalCategoryId of new Set(connectPersonalIds)) {
-      if (!ownedCategoryIds.has(personalCategoryId)) {
+      if (!personalCategoryById.has(personalCategoryId)) {
         throw new BadRequestException(this.i18n.t('userGroup.PERSONAL_CATEGORY_NOT_OWNED'));
+      }
+    }
+
+    const groupCategories = await this.userGroupRepository.findGroupCategoriesByIds(
+      groupId,
+      groupCategoryIds,
+    );
+    const groupCategoryTypeById = new Map(groupCategories.map((gc) => [gc.id, gc.categoryType]));
+
+    for (const { groupCategoryId, personalCategoryId } of relatedCategories) {
+      if (personalCategoryId == null) {
+        continue;
+      }
+      const personalCategory = personalCategoryById.get(personalCategoryId);
+      const groupCategoryType = groupCategoryTypeById.get(groupCategoryId);
+      if (
+        personalCategory &&
+        groupCategoryType &&
+        personalCategory.categoryType !== groupCategoryType
+      ) {
+        throw new BadRequestException(this.i18n.t('userGroup.CATEGORY_TYPE_MISMATCH_CONNECT'));
       }
     }
 

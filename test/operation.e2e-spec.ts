@@ -90,6 +90,13 @@ describe('OperationController (e2e)', () => {
     await app.close();
   });
 
+  it('/operation - create operation (POST) - type mismatch with category returns 400', async () => {
+    return request(app.getHttpServer())
+      .post('/operation')
+      .send({ ...testCreateDto, type: 'EXPENSE', categoryId: createdCategoryId })
+      .expect(400);
+  });
+
   it('/operation - create operation (POST)', async () => {
     return request(app.getHttpServer())
       .post('/operation')

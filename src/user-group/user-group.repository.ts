@@ -169,12 +169,14 @@ export class UserGroupRepository {
                 include: {
                   operations: {
                     where: {
+                      ...(categoryType && { type: categoryType }),
                       ...(Object.keys(operationDateFilter).length > 0 && {
                         operationDate: operationDateFilter,
                       }),
                     },
                     select: {
                       value: true,
+                      type: true,
                     },
                   },
                 },
@@ -189,7 +191,8 @@ export class UserGroupRepository {
           name: group.name,
           totalAmount: group.personalCategories.reduce((sum: Prisma.Decimal, pc) => {
             const categorySum = pc.personalCategory.operations.reduce(
-              (catSum: Prisma.Decimal, op) => catSum.plus(op.value),
+              (catSum: Prisma.Decimal, op) =>
+                op.type === group.categoryType ? catSum.plus(op.value) : catSum,
               new Prisma.Decimal(0),
             );
             return sum.plus(categorySum);
@@ -475,6 +478,16 @@ export class UserGroupRepository {
         groupId,
         id: { in: groupCategoryIds },
       },
+    });
+  }
+
+  findGroupCategoriesByIds(groupId: string, groupCategoryIds: string[]) {
+    if (groupCategoryIds.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.prisma.groupCategory.findMany({
+      where: { groupId, id: { in: groupCategoryIds } },
+      select: { id: true, categoryType: true },
     });
   }
 

@@ -207,6 +207,19 @@ describe('UserController (e2e)', () => {
       });
   });
 
+  it('/user/invitation (POST) - invite again after cancelled - success', async () => {
+    return request(app.getHttpServer())
+      .post('/user/invitation')
+      .send({ userIds: [userForFind.id], groupId })
+      .expect(201)
+      .then(({ body }) => {
+        expect(body).toHaveLength(1);
+        expect(body[0].status).toBe(InvitationStatus.PENDING);
+        expect(body[0].id).not.toBe(invitationId);
+        invitationId = body[0].id;
+      });
+  });
+
   it('/user/request-email-change (POST) - creates email change token', async () => {
     return request(app.getHttpServer())
       .post('/user/request-email-change')

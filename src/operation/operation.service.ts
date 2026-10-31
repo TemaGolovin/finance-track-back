@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Operation, Prisma } from '@prisma/client';
 import { I18nService } from 'nestjs-i18n';
 import { CategoryService } from 'src/category/category.service';
@@ -83,7 +83,11 @@ export class OperationService {
   }
 
   async createOperation(createOperationDto: CreateOperationDto, userId: string) {
-    await this.categoryService.requireCategoryForUser(createOperationDto.categoryId, userId);
+    const category = await this.categoryService.requireCategoryForUser(
+      createOperationDto.categoryId,
+      userId,
+    );
+    this.assertOperationTypeMatchesCategory(createOperationDto.type, category.categoryType);
 
     return await this.operationRepository.createOperation(createOperationDto, userId);
   }
@@ -99,7 +103,11 @@ export class OperationService {
       );
     }
 
-    await this.categoryService.requireCategoryForUser(createOperationDto.categoryId, userId);
+    const category = await this.categoryService.requireCategoryForUser(
+      createOperationDto.categoryId,
+      userId,
+    );
+    this.assertOperationTypeMatchesCategory(createOperationDto.type, category.categoryType);
 
     const operation = await this.operationRepository.updateOperation(
       id,
@@ -130,5 +138,14 @@ export class OperationService {
     }
 
     return deleted;
+  }
+
+  private assertOperationTypeMatchesCategory(
+    operationType: 'INCOME' | 'EXPENSE',
+    categoryType: 'INCOME' | 'EXPENSE',
+  ) {
+    if (operationType !== categoryType) {
+      throw new BadRequestException(this.i18n.t('errors.OPERATION_TYPE_MISMATCH_CATEGORY'));
+    }
   }
 }

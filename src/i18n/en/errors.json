@@ -8,5 +8,6 @@
   "INVALID_DATE": "Invalid date",
   "INVALID_TOKEN": "Invalid or expired token",
   "TOKEN_EXPIRED": "Token has expired",
-  "WRONG_PASSWORD": "Wrong password"
+  "WRONG_PASSWORD": "Wrong password",
+  "OPERATION_TYPE_MISMATCH_CATEGORY": "Operation type must match the category type"
 }

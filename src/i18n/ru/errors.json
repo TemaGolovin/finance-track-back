@@ -8,5 +8,6 @@
   "INVALID_DATE": "Некорректная дата",
   "INVALID_TOKEN": "Недействительная или истёкшая ссылка",
   "TOKEN_EXPIRED": "Срок действия ссылки истёк",
-  "WRONG_PASSWORD": "Неверный пароль"
+  "WRONG_PASSWORD": "Неверный пароль",
+  "OPERATION_TYPE_MISMATCH_CATEGORY": "Тип операции должен совпадать с типом категории"
 }

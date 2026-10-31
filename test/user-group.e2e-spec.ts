@@ -184,6 +184,31 @@ describe('UserGroupController (e2e)', () => {
       });
   });
 
+  it('/user-group/:groupId/category/connect - type mismatch returns 400', async () => {
+    const incomePersonal = await prismaService.category.create({
+      data: {
+        name: 'Income personal for connect mismatch',
+        userId: mockUser.id,
+        categoryType: 'INCOME',
+      },
+    });
+
+    return request(app.getHttpServer())
+      .patch(`/user-group/${userGroupId}/category/connect`)
+      .send({
+        relatedCategories: [
+          {
+            personalCategoryId: incomePersonal.id,
+            groupCategoryId,
+          },
+        ],
+      })
+      .expect(400)
+      .then(async () => {
+        await prismaService.category.delete({ where: { id: incomePersonal.id } });
+      });
+  });
+
   it('/user-group/:groupId/category/connect - connect group categories to personal categories - success', async () => {
     return request(app.getHttpServer())
       .patch(`/user-group/${userGroupId}/category/connect`)
@@ -202,6 +227,30 @@ describe('UserGroupController (e2e)', () => {
         expect(body[0].id).toBe(groupCategoryId);
         expect(body[0].personalCategories.length).toBe(1);
         expect(body[0].personalCategories[0].categoryId).toBe(personalCategoryId);
+      });
+  });
+
+  it('/user-group/:id/stat (GET) - excludes operations with wrong type in category', async () => {
+    const statBeforeWrongOp = await request(app.getHttpServer())
+      .get(`/user-group/${userGroupId}/stat?operationType=EXPENSE`)
+      .expect(200);
+
+    await prismaService.operation.create({
+      data: {
+        comment: 'Wrong type in expense category',
+        value: 9999,
+        type: 'INCOME',
+        operationDate: new Date(),
+        userId: mockUser.id,
+        categoryId: personalCategoryId,
+      },
+    });
+
+    return request(app.getHttpServer())
+      .get(`/user-group/${userGroupId}/stat?operationType=EXPENSE`)
+      .expect(200)
+      .then(({ body }) => {
+        expect(body.totalSum).toBe(statBeforeWrongOp.body.totalSum);
       });
   });
 

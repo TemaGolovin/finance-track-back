@@ -146,7 +146,6 @@ model Invitation {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt()
 
-  @@unique([recipientId, groupId], name: "active_invitation")
   @@index([recipientId, status])
 }
 

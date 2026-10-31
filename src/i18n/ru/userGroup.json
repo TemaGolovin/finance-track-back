@@ -9,5 +9,6 @@
   "DUPLICATE_PERSONAL_CATEGORY_IN_CONNECT": "Каждую личную категорию можно связать только с одной категорией группы в этой группе",
   "GROUP_CATEGORY_NOT_IN_GROUP": "Категория группы не принадлежит этой группе",
   "PERSONAL_CATEGORY_NOT_OWNED": "Личная категория не принадлежит пользователю",
+  "CATEGORY_TYPE_MISMATCH_CONNECT": "Тип личной и групповой категории должен совпадать",
   "GROUP_DELETED": "Группа «{name}» успешно удалена"
 }
