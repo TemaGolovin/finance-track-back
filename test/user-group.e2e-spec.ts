@@ -5,6 +5,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { CreateUserGroupDto } from 'src/user-group/dto/create-user-group.dto';
+import { UserGroupRepository } from 'src/user-group/user-group.repository';
 import request = require('supertest');
 
 const mockUser = {
@@ -20,6 +21,7 @@ const createUserGroupDto: CreateUserGroupDto = {
 describe('UserGroupController (e2e)', () => {
   let app: INestApplication;
   let prismaService: PrismaService;
+  let userGroupRepository: UserGroupRepository;
   let userGroupId: string;
   let groupCategoryId: string;
   let personalCategoryId: string;
@@ -44,6 +46,7 @@ describe('UserGroupController (e2e)', () => {
     app = moduleFixture.createNestApplication();
 
     prismaService = moduleFixture.get<PrismaService>(PrismaService);
+    userGroupRepository = moduleFixture.get<UserGroupRepository>(UserGroupRepository);
 
     await prismaService.user.create({
       data: {
@@ -164,6 +167,23 @@ describe('UserGroupController (e2e)', () => {
       });
   });
 
+  it('/user-group/:groupId/operations - filter by group category without maps returns empty', async () => {
+    const unmappedGroupCategory = await prismaService.groupCategory.create({
+      data: {
+        name: 'Unmapped group category',
+        groupId: userGroupId,
+      },
+    });
+
+    return request(app.getHttpServer())
+      .get(`/user-group/${userGroupId}/operations?categoryId=${unmappedGroupCategory.id}`)
+      .expect(200)
+      .then(({ body }) => {
+        expect(body.totalSum).toBe('0');
+        expect(body.operationsByDate).toEqual([]);
+      });
+  });
+
   it('/user-group/:groupId/category/connect - connect group categories to personal categories - success', async () => {
     return request(app.getHttpServer())
       .patch(`/user-group/${userGroupId}/category/connect`)
@@ -183,6 +203,35 @@ describe('UserGroupController (e2e)', () => {
         expect(body[0].personalCategories.length).toBe(1);
         expect(body[0].personalCategories[0].categoryId).toBe(personalCategoryId);
       });
+  });
+
+  it('removeUserFromGroup deletes personal category maps for the group', async () => {
+    const mapsBefore = await prismaService.personalCategoryMap.count({
+      where: { userId: mockUser.id, groupId: userGroupId },
+    });
+    expect(mapsBefore).toBeGreaterThan(0);
+
+    const statBefore = await request(app.getHttpServer())
+      .get(`/user-group/${userGroupId}/stat`)
+      .expect(200);
+
+    expect(Number(statBefore.body.totalSum)).toBeGreaterThan(0);
+
+    await userGroupRepository.removeUserFromGroup(mockUser.id, userGroupId);
+
+    const mapsAfter = await prismaService.personalCategoryMap.findMany({
+      where: { userId: mockUser.id, groupId: userGroupId },
+    });
+    expect(mapsAfter).toHaveLength(0);
+
+    await userGroupRepository.addUserToGroup(mockUser.id, userGroupId);
+
+    const statAfter = await request(app.getHttpServer())
+      .get(`/user-group/${userGroupId}/stat`)
+      .expect(200);
+
+    expect(statAfter.body.totalSum).toBe('0');
+    expect(statAfter.body.byCategories).toEqual([]);
   });
 
   it('/user-group/:id (PATCH) - update user group - success', async () => {

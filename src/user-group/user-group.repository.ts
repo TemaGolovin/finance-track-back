@@ -63,11 +63,17 @@ export class UserGroupRepository {
   }
 
   async removeUserFromGroup(userId: string, groupId: string) {
-    return await this.prisma.userRelationGroupUser.deleteMany({
-      where: {
-        userId,
-        userRelationGroupId: groupId,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      await tx.personalCategoryMap.deleteMany({
+        where: { userId, groupId },
+      });
+
+      return tx.userRelationGroupUser.deleteMany({
+        where: {
+          userId,
+          userRelationGroupId: groupId,
+        },
+      });
     });
   }
 
@@ -326,7 +332,7 @@ export class UserGroupRepository {
       ...(Object.keys(operationDateFilter).length > 0 && {
         operationDate: operationDateFilter,
       }),
-      ...(personalCategoryIds.length > 0 && {
+      ...(categoryId && {
         categoryId: {
           in: personalCategoryIds,
         },
