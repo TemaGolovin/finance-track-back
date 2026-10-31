@@ -32,9 +32,12 @@ import { Public } from 'src/decorators/public.decorator';
 import { JwtAuthRefreshGuard } from './guard/refresh-jwt.guard';
 import { UserRefreshInfo } from 'src/decorators/user-auth-refresh-info.decorator';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
+import { getAuthCookieOptions } from './auth-cookie.options';
 
 @Controller('auth')
 export class AuthController {
+  private readonly authCookieOptions = getAuthCookieOptions();
+
   constructor(private readonly authService: AuthService) {}
 
   @Public()
@@ -50,18 +53,8 @@ export class AuthController {
 
     const { refreshToken, ...dataWithoutRefresh } = data;
 
-    response.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      path: '/',
-    });
-    response.cookie('accessToken', dataWithoutRefresh.token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      path: '/',
-    });
+    response.cookie('refreshToken', refreshToken, this.authCookieOptions);
+    response.cookie('accessToken', dataWithoutRefresh.token, this.authCookieOptions);
 
     return response.status(200).json({
       ...dataWithoutRefresh,
@@ -80,19 +73,8 @@ export class AuthController {
 
     const { refreshToken, ...dataWithoutRefresh } = data;
 
-    response.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      path: '/',
-    });
-
-    response.cookie('accessToken', dataWithoutRefresh.token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      path: '/',
-    });
+    response.cookie('refreshToken', refreshToken, this.authCookieOptions);
+    response.cookie('accessToken', dataWithoutRefresh.token, this.authCookieOptions);
 
     return response.status(200).json(dataWithoutRefresh);
   }
@@ -109,19 +91,8 @@ export class AuthController {
 
     const { refreshToken: newRefreshToken, ...dataWithoutRefresh } = responseData.data;
 
-    response.cookie('refreshToken', newRefreshToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      path: '/',
-    });
-
-    response.cookie('accessToken', dataWithoutRefresh.token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      path: '/',
-    });
+    response.cookie('refreshToken', newRefreshToken, this.authCookieOptions);
+    response.cookie('accessToken', dataWithoutRefresh.token, this.authCookieOptions);
 
     return response.status(200).json(dataWithoutRefresh);
   }
@@ -136,8 +107,8 @@ export class AuthController {
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
     await this.authService.logout(userInfo);
-    response.clearCookie('refreshToken');
-    response.clearCookie('accessToken');
+    response.clearCookie('refreshToken', this.authCookieOptions);
+    response.clearCookie('accessToken', this.authCookieOptions);
     return response.status(200).json({
       success: true,
     });
@@ -158,18 +129,8 @@ export class AuthController {
     const { data } = await this.authService.updateProfile(userInfo, dto.name, userAgent);
     const { refreshToken, ...dataWithoutRefresh } = data;
 
-    response.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      path: '/',
-    });
-    response.cookie('accessToken', dataWithoutRefresh.token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      path: '/',
-    });
+    response.cookie('refreshToken', refreshToken, this.authCookieOptions);
+    response.cookie('accessToken', dataWithoutRefresh.token, this.authCookieOptions);
 
     return response.status(200).json({
       success: true,
@@ -240,8 +201,8 @@ export class AuthController {
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
     await this.authService.deleteAccount(userInfo.id, dto);
-    response.clearCookie('refreshToken');
-    response.clearCookie('accessToken');
+    response.clearCookie('refreshToken', this.authCookieOptions);
+    response.clearCookie('accessToken', this.authCookieOptions);
     return response.status(200).json({ success: true });
   }
 }
