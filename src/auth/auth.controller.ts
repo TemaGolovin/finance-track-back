@@ -84,7 +84,14 @@ export class AuthController {
   @Post('refresh')
   async refresh(
     @Res() response: Response,
-    @UserRefreshInfo() user: { email: string; name: string; id: string; deviceId: string },
+    @UserRefreshInfo()
+    user: {
+      email: string;
+      name: string;
+      id: string;
+      deviceId: string;
+      refreshToken: string;
+    },
     @Headers('User-agent') userAgent: string,
   ) {
     const responseData = await this.authService.refresh(user, userAgent);

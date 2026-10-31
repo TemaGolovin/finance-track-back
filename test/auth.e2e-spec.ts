@@ -1,11 +1,11 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as cookieParser from 'cookie-parser';
-import * as request from 'supertest';
+import request = require('supertest');
 import { AppModule } from '../src/app.module';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { RegistrationDto } from 'src/auth/dto/auth.dto';
-import { compareSync } from 'bcryptjs';
+import { refreshTokenMatchesStorageSync } from 'src/auth/lib/refresh-token-hash';
 import { EmailTokenType } from '@prisma/client';
 import { MailService } from 'src/mail/mail.service';
 
@@ -35,6 +35,7 @@ describe('AuthController (e2e)', () => {
 
   let verifyEmailToken: string | null = null;
   let resetPasswordToken: string | null = null;
+  let refreshTokenBeforeRotation: string | null = null;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -103,7 +104,9 @@ describe('AuthController (e2e)', () => {
         });
 
         expect(existRefreshInDB).toBeDefined();
-        expect(compareSync(refreshToken, existRefreshInDB.token)).toBeTruthy();
+        expect(
+          refreshTokenMatchesStorageSync(refreshToken, existRefreshInDB.token),
+        ).toBeTruthy();
       });
   });
 
@@ -125,18 +128,23 @@ describe('AuthController (e2e)', () => {
         expect(body.email).toBe(userInfo.email);
         expect(body.id).toBe(userInfo.userId);
         expect(body?.password).toBeUndefined();
+        userInfo.refreshToken = refreshToken;
       });
   });
 
   it('/auth/refresh - refresh token (POST)', async () => {
+    const previousRefreshToken = userInfo.refreshToken;
+    refreshTokenBeforeRotation = previousRefreshToken;
+
     return request(app.getHttpServer())
       .post('/auth/refresh')
-      .set('Cookie', [`refreshToken=${userInfo.refreshToken}`])
+      .set('Cookie', [`refreshToken=${previousRefreshToken}`])
       .expect(200)
       .then(async ({ header }) => {
         const setCookieHeader = header['set-cookie'];
-        const token = setCookieHeader[0].split(';')[0].split('=')[1];
-        expect(token).toBeDefined();
+        const newRefreshToken = setCookieHeader[0].split(';')[0].split('=')[1];
+        expect(newRefreshToken).toBeDefined();
+        expect(newRefreshToken).not.toBe(previousRefreshToken);
 
         const existRefreshInDB = await prismaService.refreshToken.findUnique({
           where: {
@@ -148,9 +156,49 @@ describe('AuthController (e2e)', () => {
         });
 
         expect(existRefreshInDB).toBeDefined();
-        expect(compareSync(token, existRefreshInDB.token)).toBeTruthy();
-        userInfo.token = token;
+        expect(
+          refreshTokenMatchesStorageSync(newRefreshToken, existRefreshInDB.token),
+        ).toBeTruthy();
+        userInfo.refreshToken = newRefreshToken;
       });
+  });
+
+  it('/auth/refresh - rejects reused refresh token (POST)', async () => {
+    const staleRefresh = refreshTokenBeforeRotation;
+    expect(staleRefresh).toBeTruthy();
+
+    const sessionBeforeReuse = await prismaService.refreshToken.findUnique({
+      where: {
+        userId_deviceId: {
+          userId: userInfo.userId,
+          deviceId: registrationDto.deviceId,
+        },
+      },
+    });
+    expect(sessionBeforeReuse).toBeDefined();
+    expect(staleRefresh).not.toBe(userInfo.refreshToken);
+    expect(
+      refreshTokenMatchesStorageSync(userInfo.refreshToken, sessionBeforeReuse.token),
+    ).toBe(true);
+    expect(
+      refreshTokenMatchesStorageSync(staleRefresh, sessionBeforeReuse.token),
+    ).toBe(false);
+
+    await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .set('Cookie', [`refreshToken=${staleRefresh}`])
+      .expect(401);
+
+    const session = await prismaService.refreshToken.findUnique({
+      where: {
+        userId_deviceId: {
+          userId: userInfo.userId,
+          deviceId: registrationDto.deviceId,
+        },
+      },
+    });
+
+    expect(session).toBeNull();
   });
 
   it('/auth/resend-verification - resends verification email (POST)', async () => {

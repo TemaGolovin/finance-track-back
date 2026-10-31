@@ -7,7 +7,12 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { EmailTokenType } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { compare, genSalt, hash } from 'bcryptjs';
+import {
+  hashRefreshTokenForStorage,
+  refreshTokenMatchesStorage,
+} from './lib/refresh-token-hash';
 import { I18nService } from 'nestjs-i18n';
 import { tSafe } from 'src/i18n/t-safe';
 import { CategoryService } from 'src/category/category.service';
@@ -136,12 +141,27 @@ export class AuthService {
   }
 
   async refresh(
-    user: { email: string; name: string; id: string; deviceId: string },
+    user: {
+      email: string;
+      name: string;
+      id: string;
+      deviceId: string;
+      refreshToken: string;
+    },
     userAgent: string,
   ) {
     const { user: payload, refreshTokenInfo } = await this.findRefreshToken(user);
 
     if (!refreshTokenInfo) {
+      throw new UnauthorizedException(tSafe('errors.UNAUTHORIZED', 'en'));
+    }
+
+    const tokenMatches = await refreshTokenMatchesStorage(
+      user.refreshToken,
+      refreshTokenInfo.token,
+    );
+    if (!tokenMatches) {
+      await this.authRepository.deleteRefreshTokenByUserIdDeviceId(user.id, user.deviceId);
       throw new UnauthorizedException(tSafe('errors.UNAUTHORIZED', 'en'));
     }
 
@@ -493,7 +513,7 @@ export class AuthService {
       { expiresIn: '15m', secret: process.env.JWT_SECRET_CODE },
     );
     const refreshToken = await this.jwtService.signAsync(
-      { id, deviceId, name, email },
+      { id, deviceId, name, email, jti: randomUUID() },
       { expiresIn: '7d', secret: process.env.JWT_REFRESH_SECRET },
     );
 
@@ -514,7 +534,7 @@ export class AuthService {
     deviceId: string;
     userAgent?: string;
   }) {
-    const hashedRefreshToken = await hash(refreshToken, 10);
+    const hashedRefreshToken = await hashRefreshTokenForStorage(refreshToken);
     await this.authRepository.createRefreshToken({
       userId,
       deviceId,

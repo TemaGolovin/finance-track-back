@@ -5,7 +5,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { CreateUserGroupDto } from 'src/user-group/dto/create-user-group.dto';
-import * as request from 'supertest';
+import request = require('supertest');
 
 const mockUser = {
   id: '87654321-1234-1234-1234-abcdefghijkl',
