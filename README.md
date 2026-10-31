@@ -8,7 +8,7 @@ REST API for shared family or group income and expense tracking: users, JWT, ref
 
 **Backend tech debt (refactoring):** [docs/TECH_DEBT.md](./docs/TECH_DEBT.md).
 
-OpenAPI (Swagger) docs: after the server starts, open `http://localhost:<PORT>/api` (path configured in `src/main.ts`).
+OpenAPI (Swagger): `http://localhost:<PORT>/api` when enabled (default in dev; in production set `SWAGGER_ENABLED=true`). Optional HTTP Basic Auth: `SWAGGER_USER` / `SWAGGER_PASSWORD`. See `src/config/swagger.config.ts`.
 
 ## Stack
 
@@ -58,6 +58,10 @@ Create a `.env` file in the backend root:
 | `JWT_SECRET_CODE` | Secret for signing access tokens |
 | `JWT_REFRESH_SECRET` | Secret for signing refresh tokens |
 | `PORT` | HTTP server port (optional; default **3000**) |
+| `AUTH_RATE_LIMIT_MAX` | Max login/registration attempts per IP per window (default **5**) |
+| `AUTH_RATE_LIMIT_TTL_MS` | Rate limit window in ms (default **60000**) |
+| `SWAGGER_ENABLED` | `true` / `false`; in production Swagger is off unless `true` |
+| `SWAGGER_USER`, `SWAGGER_PASSWORD` | Optional Basic Auth for `/api` and `/api-json` |
 
 ## Port and local pairing with the frontend
 

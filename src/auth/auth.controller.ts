@@ -26,13 +26,26 @@ import {
 import { RegistrationEntity } from './entity/registration.entity';
 import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
 import { ApiConflictResponse, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { LoginEntity } from './entity/login.entity';
 import { Response } from 'express';
 import { Public } from 'src/decorators/public.decorator';
+import {
+  getAuthThrottleLimit,
+  getAuthThrottleTtlMs,
+} from 'src/config/auth-throttle.config';
+import { omitAuthTokensFromBody } from './lib/omit-access-token';
 import { JwtAuthRefreshGuard } from './guard/refresh-jwt.guard';
 import { UserRefreshInfo } from 'src/decorators/user-auth-refresh-info.decorator';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
 import { getAuthCookieOptions } from './auth-cookie.options';
+
+const authLoginRegistrationThrottle = {
+  auth: {
+    limit: getAuthThrottleLimit(),
+    ttl: getAuthThrottleTtlMs(),
+  },
+};
 
 @Controller('auth')
 export class AuthController {
@@ -41,6 +54,8 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle(authLoginRegistrationThrottle)
   @Post('registration')
   @ApiOkResponse({ type: RegistrationEntity })
   @ApiConflictResponse({ description: 'name or email already exists', type: TemplateErrorResponse })
@@ -51,17 +66,17 @@ export class AuthController {
   ) {
     const { data } = await this.authService.registration(registrationDto, userAgent);
 
-    const { refreshToken, ...dataWithoutRefresh } = data;
+    const { refreshToken, token } = data;
 
     response.cookie('refreshToken', refreshToken, this.authCookieOptions);
-    response.cookie('accessToken', dataWithoutRefresh.token, this.authCookieOptions);
+    response.cookie('accessToken', token, this.authCookieOptions);
 
-    return response.status(200).json({
-      ...dataWithoutRefresh,
-    });
+    return response.status(200).json(omitAuthTokensFromBody(data));
   }
 
   @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle(authLoginRegistrationThrottle)
   @Post('login')
   @ApiOkResponse({ type: LoginEntity })
   async login(
@@ -71,12 +86,12 @@ export class AuthController {
   ) {
     const { data } = await this.authService.login(loginDto, userAgent);
 
-    const { refreshToken, ...dataWithoutRefresh } = data;
+    const { refreshToken, token } = data;
 
     response.cookie('refreshToken', refreshToken, this.authCookieOptions);
-    response.cookie('accessToken', dataWithoutRefresh.token, this.authCookieOptions);
+    response.cookie('accessToken', token, this.authCookieOptions);
 
-    return response.status(200).json(dataWithoutRefresh);
+    return response.status(200).json(omitAuthTokensFromBody(data));
   }
 
   @Public()
@@ -96,12 +111,12 @@ export class AuthController {
   ) {
     const responseData = await this.authService.refresh(user, userAgent);
 
-    const { refreshToken: newRefreshToken, ...dataWithoutRefresh } = responseData.data;
+    const { refreshToken: newRefreshToken, token } = responseData.data;
 
     response.cookie('refreshToken', newRefreshToken, this.authCookieOptions);
-    response.cookie('accessToken', dataWithoutRefresh.token, this.authCookieOptions);
+    response.cookie('accessToken', token, this.authCookieOptions);
 
-    return response.status(200).json(dataWithoutRefresh);
+    return response.status(200).json(omitAuthTokensFromBody(responseData.data));
   }
 
   @Post('logout')
@@ -134,19 +149,14 @@ export class AuthController {
     @Headers('User-agent') userAgent: string,
   ) {
     const { data } = await this.authService.updateProfile(userInfo, dto.name, userAgent);
-    const { refreshToken, ...dataWithoutRefresh } = data;
+    const { refreshToken, token } = data;
 
     response.cookie('refreshToken', refreshToken, this.authCookieOptions);
-    response.cookie('accessToken', dataWithoutRefresh.token, this.authCookieOptions);
+    response.cookie('accessToken', token, this.authCookieOptions);
 
     return response.status(200).json({
       success: true,
-      data: {
-        id: dataWithoutRefresh.id,
-        email: dataWithoutRefresh.email,
-        name: dataWithoutRefresh.name,
-        token: dataWithoutRefresh.token,
-      },
+      data: omitAuthTokensFromBody(data),
     });
   }
 

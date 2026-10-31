@@ -31,7 +31,11 @@ import {
   ResetPasswordDto,
   VerifyEmailDto,
 } from './dto/auth.dto';
-import { RegistrationEntity } from './entity/registration.entity';
+import {
+  LoginSessionData,
+  ProfileSessionData,
+  RegistrationSessionData,
+} from './types/auth-session-data';
 
 @Injectable()
 export class AuthService {
@@ -48,7 +52,7 @@ export class AuthService {
   async registration(
     registrationDto: RegistrationDto,
     userAgent: string,
-  ): Promise<ResponseWrapper<RegistrationEntity & { refreshToken: string }>> {
+  ): Promise<ResponseWrapper<RegistrationSessionData>> {
     await this.checkUserExistsByEmail(registrationDto.email);
     await this.checkUserExistsByName(registrationDto.name);
 

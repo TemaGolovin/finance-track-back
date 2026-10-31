@@ -26,13 +26,4 @@ export class LoginEntity {
     uniqueItems: true,
   })
   name: string;
-
-  @ApiProperty({
-    description: 'access token',
-    example:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNT',
-    required: true,
-    type: String,
-  })
-  token: string;
 }

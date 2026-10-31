@@ -28,15 +28,6 @@ export class RegistrationEntity {
   name: string;
 
   @ApiProperty({
-    description: 'access token',
-    example:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNT',
-    required: true,
-    type: String,
-  })
-  token: string;
-
-  @ApiProperty({
     description: 'user creation date',
     example: '2025-03-02T16:41:01.486Z',
     required: true,

@@ -8,6 +8,43 @@ import { RegistrationDto } from 'src/auth/dto/auth.dto';
 import { refreshTokenMatchesStorageSync } from 'src/auth/lib/refresh-token-hash';
 import { EmailTokenType } from '@prisma/client';
 import { MailService } from 'src/mail/mail.service';
+import { getAuthThrottleLimit } from 'src/config/auth-throttle.config';
+
+function normalizeSetCookieHeader(
+  setCookieHeader: string | string[] | undefined,
+): string[] | undefined {
+  if (!setCookieHeader) {
+    return undefined;
+  }
+
+  return Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
+}
+
+function getCookieValue(
+  setCookieHeader: string | string[] | undefined,
+  name: string,
+): string | undefined {
+  const cookies = normalizeSetCookieHeader(setCookieHeader);
+  if (!cookies) {
+    return undefined;
+  }
+
+  for (const raw of cookies) {
+    const [pair] = raw.split(';');
+    const separatorIndex = pair.indexOf('=');
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    if (pair.slice(0, separatorIndex) !== name) {
+      continue;
+    }
+
+    return pair.slice(separatorIndex + 1);
+  }
+
+  return undefined;
+}
 
 const registrationDto: Partial<RegistrationDto> = {
   deviceId: '12341234-1234-1234-1234-87654321',
@@ -23,13 +60,11 @@ describe('AuthController (e2e)', () => {
     email: string | null;
     userId: string | null;
     password: string | null;
-    token: string | null;
     refreshToken: string | null;
   } = {
     email: null,
     userId: null,
     password: null,
-    token: null,
     refreshToken: null,
   };
 
@@ -77,20 +112,20 @@ describe('AuthController (e2e)', () => {
       .set('user-agent', 'test-agent')
       .expect(200)
       .then(async ({ body, header }) => {
-        const setCookieHeader = header['set-cookie'];
-        const refreshToken = setCookieHeader[0].split(';')[0].split('=')[1];
+        const refreshToken = getCookieValue(header['set-cookie'], 'refreshToken');
+        const accessToken = getCookieValue(header['set-cookie'], 'accessToken');
 
         expect(refreshToken).toBeDefined();
+        expect(accessToken).toBeDefined();
         expect(body.email).toBe(registrationDto.email);
         expect(body.id).toBeDefined();
-        expect(body?.token).toBeDefined();
+        expect(body?.token).toBeUndefined();
         expect(body?.password).toBeUndefined();
 
         userInfo = {
           password: registrationDto.password,
           email: body.email,
           userId: body.id,
-          token: body?.token,
           refreshToken,
         };
 
@@ -121,12 +156,14 @@ describe('AuthController (e2e)', () => {
       .set('user-agent', 'test-agent')
       .expect(200)
       .then(({ body, header }) => {
-        const setCookieHeader = header['set-cookie'];
-        const refreshToken = setCookieHeader[0].split(';')[0].split('=')[1];
+        const refreshToken = getCookieValue(header['set-cookie'], 'refreshToken');
+        const accessToken = getCookieValue(header['set-cookie'], 'accessToken');
 
         expect(refreshToken).toBeDefined();
+        expect(accessToken).toBeDefined();
         expect(body.email).toBe(userInfo.email);
         expect(body.id).toBe(userInfo.userId);
+        expect(body?.token).toBeUndefined();
         expect(body?.password).toBeUndefined();
         userInfo.refreshToken = refreshToken;
       });
@@ -301,5 +338,32 @@ describe('AuthController (e2e)', () => {
       .post('/auth/reset-password')
       .send({ token: 'invalid-token-xyz', newPassword: 'somePassword123' })
       .expect(400);
+  });
+
+  it('/auth/login - rate limited after too many attempts (POST)', async () => {
+    const limit = getAuthThrottleLimit();
+    const failedAttemptsBeforeBlock = Math.max(limit - 1, 0);
+
+    for (let attempt = 0; attempt < failedAttemptsBeforeBlock; attempt += 1) {
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: 'rate-limit@example.com',
+          password: 'wrong-password',
+          deviceId: registrationDto.deviceId,
+        })
+        .set('user-agent', 'rate-limit-test')
+        .expect(401);
+    }
+
+    await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: 'rate-limit@example.com',
+        password: 'wrong-password',
+        deviceId: registrationDto.deviceId,
+      })
+      .set('user-agent', 'rate-limit-test')
+      .expect(429);
   });
 });
