@@ -24,4 +24,22 @@ export class UpdateCategoryDto {
     enum: ['INCOME', 'EXPENSE'],
   })
   categoryType: 'INCOME' | 'EXPENSE';
+
+  @IsString()
+  @ApiProperty({
+    description: 'Category color in hex format',
+    example: '#FF0000',
+    required: true,
+    type: String,
+  })
+  color: string;
+
+  @IsString()
+  @ApiProperty({
+    description: 'Category icon in string format',
+    example: 'CategoryIcon',
+    required: true,
+    type: String,
+  })
+  icon: string;
 }

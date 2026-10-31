@@ -54,6 +54,9 @@ export class CategoryRepository {
       where: { id, userId },
       data: {
         name: categoryDto.name.toLowerCase(),
+        categoryType: categoryDto.categoryType,
+        color: categoryDto.color,
+        icon: categoryDto.icon,
       },
     });
     if (result.count === 0) {
