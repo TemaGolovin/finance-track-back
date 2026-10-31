@@ -39,6 +39,17 @@ services:
       postgres:
         condition: service_healthy
 
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: finance-track-mailpit
+    restart: unless-stopped
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_WEBROOT: /mailpit
+    expose:
+      - '1025'
+      - '8025'
+
   api:
     build:
       context: .
@@ -53,11 +64,16 @@ services:
       PORT: 3000
       CLIENT_URL: ${PUBLIC_ORIGIN}
       APP_URL: ${PUBLIC_ORIGIN}
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_SECURE: ${MAIL_SECURE:-false}
     depends_on:
       postgres:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      mailpit:
+        condition: service_started
 
   web:
     build:
@@ -89,6 +105,8 @@ services:
     depends_on:
       web:
         condition: service_healthy
+      mailpit:
+        condition: service_started
 
   certbot:
     image: certbot/certbot:v3.2.0

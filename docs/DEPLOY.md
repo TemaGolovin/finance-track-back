@@ -29,6 +29,8 @@ chmod 600 .env
 | `PUBLIC_ORIGIN` | `https://finance.example.com` или на первый запуск `http://IP` |
 | `MAIL_*`, `APP_URL` | для писем (в compose `APP_URL` = `PUBLIC_ORIGIN`) |
 
+**Почта на стенде:** в `docker-compose.prod.yml` поднимается **Mailpit**. Если в `.env` не заданы `MAIL_HOST` / `MAIL_PORT`, API шлёт письма в `mailpit:1025`. Веб-интерфейс: `{PUBLIC_ORIGIN}/mailpit/` (регистрация, сброс пароля, верификация). Для реальной доставки укажите Resend или другой SMTP в `.env` (см. комментарии в `.env.example`). На публичном проде с внешним SMTP удалите блок `location /mailpit/` из nginx, чтобы не светить перехватчик писем.
+
 `DATABASE_URL` в `.env` нужен для локального Prisma; в compose для `api`/`migrate` хост переопределяется на `postgres`.
 
 ## 2. Запуск

@@ -1,31 +1,41 @@
-import { Module } from '@nestjs/common';
+import { join } from 'node:path';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
-import { join } from 'node:path';
+import { Module } from '@nestjs/common';
 import { MailService } from './mail.service';
 
 @Module({
   imports: [
     MailerModule.forRootAsync({
-      useFactory: () => ({
-        transport: {
-          host: process.env.MAIL_HOST,
-          port: Number(process.env.MAIL_PORT ?? 465),
-          secure: Number(process.env.MAIL_PORT ?? 465) === 465,
-          auth: {
-            user: process.env.MAIL_USER,
-            pass: process.env.MAIL_PASS,
+      useFactory: () => {
+        const port = Number(process.env.MAIL_PORT ?? 465);
+        const secure =
+          process.env.MAIL_SECURE !== undefined ? process.env.MAIL_SECURE === 'true' : port === 465;
+
+        return {
+          transport: {
+            host: process.env.MAIL_HOST,
+            port,
+            secure,
+            ...(process.env.MAIL_USER
+              ? {
+                  auth: {
+                    user: process.env.MAIL_USER,
+                    pass: process.env.MAIL_PASS,
+                  },
+                }
+              : {}),
           },
-        },
-        defaults: {
-          from: process.env.MAIL_FROM ?? '"Finance Track" <no-reply@example.com>',
-        },
-        template: {
-          dir: join(__dirname, '..', '..', 'mail', 'templates'),
-          adapter: new HandlebarsAdapter(),
-          options: { strict: true },
-        },
-      }),
+          defaults: {
+            from: process.env.MAIL_FROM ?? '"Finance Track" <no-reply@example.com>',
+          },
+          template: {
+            dir: join(__dirname, '..', '..', 'mail', 'templates'),
+            adapter: new HandlebarsAdapter(),
+            options: { strict: true },
+          },
+        };
+      },
     }),
   ],
   providers: [MailService],
