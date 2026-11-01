@@ -10,38 +10,14 @@
 
 **Сделано:** `CategoryModule` экспортирует `CategoryService` и `CategoryRepository`; `AuthModule`, `OperationModule`, `UserGroupModule` подключают его через `imports`, без дубля в `providers`. `UserModule` импортирует `UserGroupModule` вместо копирования `UserGroupService` / `UserGroupRepository` (лишние `Category*` у `UserModule` убраны — сервис их не использовал). С `@AppModule` снят пустой `@Global()`; глобальным остаётся только `PrismaModule` с `exports`.
 
-### NestJS: жизненный цикл запроса (middleware → guards → pipes → interceptors → filters)
+### ~~NestJS: жизненный цикл запроса (middleware → guards → pipes → interceptors → filters)~~
 
-Заметки с разбора текущего API. Не ломает стенд само по себе; трогать пакетом, когда будете выравнивать HTTP-слой. Порядок слоёв и назначение — [Request lifecycle](https://docs.nestjs.com/faq/request-lifecycle).
+**Сделано:** `configureApp()` (`ValidationPipe` с `whitelist` / `forbidNonWhitelisted` / `transform`, `cookie-parser`) — общий bootstrap для `main.ts` и e2e. Глобальный `JwtAuthGuard` через `APP_GUARD` + `useExisting`; `@Public()` — `Reflector.getAllAndOverride`; `canActivate` без каста в `boolean`. Auth: `@Res({ passthrough: true })`, cookies в `setAuthSessionCookies` / `clearAuthSessionCookies`. DTO: `GetCategoriesDto`, `FindUsersByNameQueryDto`, `GetUserGroupOperationsDto`, nested validation в `ConnectGroupCategoryDto`, `color`/`icon`/`categoryId` в query. `ParseUUIDPipe` на path `:id` / `:groupId` / `:memberId` / `:categoryId` / `:deviceId`. В `SafeI18nValidationExceptionFilter` — без утечки `value`/`target` в `error`.
 
-**Как сейчас (в общих чертах):**
+**Остаётся (по необходимости):**
 
-
-| Слой              | В проекте                                                                             |
-| ----------------- | ------------------------------------------------------------------------------------- |
-| Middleware        | CORS, `cookie-parser`, i18n (`Accept-Language`)                                       |
-| Guards            | Глобальный `JwtAuthGuard` + `@Public()`; на refresh — отдельный `JwtAuthRefreshGuard` |
-| Pipes             | Глобальный `ValidationPipe` (i18n factory); `ParseUUIDPipe` точечно                   |
-| Interceptors      | Нет                                                                                   |
-| Exception filters | Только `SafeI18nValidationExceptionFilter` (ошибки валидации)                         |
-
-
-Auth в guard, DTO в pipe, user из `request.user` через `@UserInfo()`, ACL «создатель группы» в сервисе — это оставлять. Не переносить валидацию в guard и авторизацию в interceptor.
-
-Часть пунктов уже в таблицах выше: refresh-cookie, `COOKIE_SECURE`, `ValidationPipe` whitelist. Ниже — остальной HTTP-техдолг.
-
-**Сделать (когда дойдёте до рефакторинга HTTP):**
-
-1. **Cookie и** `@Res()`**.** Login/refresh/logout/profile сами пишут ответ через `@Res()`. Из‑за этого будущие interceptors на этих маршрутах не сработают. Вынести set/clear cookie из контроллера (`passthrough: true` или interceptor); не дублировать один и тот же `response.cookie(...)`.
-2. **Interceptors — по необходимости, не «чтобы были».** Имеет смысл, если появится сквозная задача: access-log + duration, единый `{ success, data }` (сейчас `ResponseWrapper` только в auth, остальной API отдаёт сущность как есть), кэш тяжёлых GET (`/operation`, `/category/stat`, group stat). Глобальная обёртка ответа — ломающий контракт для фронта, только после согласования.
-3. **Pipes жёстче и ровнее.** `whitelist` / `transform` (уже в блоке безопасности). Добить DTO: `color`/`icon` у категории, query `type` у `GET /category` (сейчас голый тип, не DTO), `categoryId` в фильтрах. Пустой `name` в `GET /user/find/by-name` — через pipe, не `if` в контроллере.
-4. `ParseUUIDPipe` **системно** на `:id` / `:groupId` / `:memberId`, не только на `DELETE /auth/sessions/:deviceId`. Иначе мусор в path уходит в Prisma как 500.
-5. **Guard чуть каноничнее.** `@Public()` через `Reflector.getAllAndOverride` (класс + метод). Глобальный guard лучше как `APP_GUARD` в модуле, а не `new JwtAuthGuard(reflector)` в `main.ts` (так уже сделано в e2e). `canActivate` у Passport возвращает Promise/Observable — не кастить в `boolean`.
-6. **Единый JSON ошибок.** Сейчас filter ловит только i18n-валидацию; `NotFound` / `Forbidden` из сервисов идут дефолтным Nest-фильтром. `TemplateErrorResponse` в Swagger есть, общего контракта — нет. Глобальный `HttpException` filter, когда выровняете ответы. Утечку `value` и `target` (пароль в теле 400) чинить сразу в `SafeI18nValidationExceptionFilter`, не ждать общего контракта — пункт в блоке «Безопасность».
-
-**Не делать:** RolesGuard ради «только создатель группы» — это resource ACL с запросом в БД, ему место в сервисе.
-
-**Критерий:** cookie не парсятся руками; контроллеры не держат Express `Response` без нужды; UUID и query валидируются pipe’ом; ошибки одного формата. Interceptor — только если есть реальное сквозное поведение. Сложность: S–M.
+1. **Interceptors** — только под сквозную задачу (access-log, единая обёртка ответа после согласования с фронтом, кэш тяжёлых GET).
+2. **Единый JSON ошибок** для `HttpException` (`NotFound` / `Forbidden`) — глобальный filter, когда выровняете контракт с `TemplateErrorResponse`.
 
 ### Уникальный индекс: 500 вместо ConflictException
 
