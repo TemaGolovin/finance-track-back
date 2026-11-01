@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsUUID, ValidateIf } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsUUID,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator';
 
 class RelatedCategory {
   @IsNotEmpty()
@@ -24,6 +31,9 @@ class RelatedCategory {
 }
 
 export class ConnectGroupCategoryDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => RelatedCategory)
   @ApiProperty({
     required: true,
     type: [RelatedCategory],

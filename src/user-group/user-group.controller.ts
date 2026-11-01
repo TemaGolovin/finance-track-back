@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import {
   ApiCreatedResponse,
   ApiForbiddenResponse,
@@ -11,6 +21,7 @@ import { InvitationEntity } from 'src/user/entity/invitation.entity';
 import { ConnectGroupCategoryDto } from './dto/connect-group-category.dto';
 import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
 import { CreateUserGroupDto } from './dto/create-user-group.dto';
+import { GetUserGroupOperationsDto } from './dto/get-user-group-operations.dto';
 import { GetUserGroupStatDto } from './dto/get-user-group-stat.dto';
 import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
 import { UpdateUserGroupDto } from './dto/update-user-group.dto';
@@ -53,7 +64,7 @@ export class UserGroupController {
     },
   })
   findOne(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
     return this.userGroupService.findOne(id, userInfo.id);
@@ -76,7 +87,7 @@ export class UserGroupController {
     },
   })
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateUserGroupDto: UpdateUserGroupDto,
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
@@ -106,7 +117,7 @@ export class UserGroupController {
   })
   async getStat(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
-    @Param('groupId') groupId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
     @Query() { startDate, endDate, operationType }: GetUserGroupStatDto,
   ) {
     return await this.userGroupService.getUserGroupStat({
@@ -156,13 +167,8 @@ export class UserGroupController {
   })
   async getOperations(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
-    @Param('groupId') groupId: string,
-    @Query() {
-      startDate,
-      endDate,
-      operationType,
-      categoryId,
-    }: GetUserGroupStatDto & { categoryId?: string },
+    @Param('groupId', ParseUUIDPipe) groupId: string,
+    @Query() { startDate, endDate, operationType, categoryId }: GetUserGroupOperationsDto,
   ) {
     return await this.userGroupService.getUserGroupOperations({
       groupId,
@@ -186,7 +192,7 @@ export class UserGroupController {
   })
   @Delete(':id')
   remove(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
     return this.userGroupService.remove(id, userInfo.id);
@@ -225,8 +231,8 @@ export class UserGroupController {
   })
   @Delete(':groupId/members/:memberId')
   removeMember(
-    @Param('groupId') groupId: string,
-    @Param('memberId') memberId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
+    @Param('memberId', ParseUUIDPipe) memberId: string,
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
     return this.userGroupService.removeMember(groupId, memberId, userInfo.id);
@@ -261,7 +267,7 @@ export class UserGroupController {
   })
   connectGroupCategoriesToPersonalCategories(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
-    @Param('groupId') groupId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
     @Body() groupCategoryDto: ConnectGroupCategoryDto,
   ) {
     return this.userGroupService.connectGroupCategoriesToPersonalCategories(
@@ -292,7 +298,7 @@ export class UserGroupController {
   })
   getGroupCategories(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
-    @Param('groupId') groupId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
   ) {
     return this.userGroupService.getGroupCategories(groupId, userInfo.id);
   }
@@ -310,7 +316,7 @@ export class UserGroupController {
   })
   createGroupCategory(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
-    @Param('groupId') groupId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
     @Body() dto: CreateGroupCategoryDto,
   ) {
     return this.userGroupService.createGroupCategory(groupId, dto, userInfo.id);
@@ -329,8 +335,8 @@ export class UserGroupController {
   })
   updateGroupCategory(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
-    @Param('groupId') groupId: string,
-    @Param('categoryId') categoryId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
+    @Param('categoryId', ParseUUIDPipe) categoryId: string,
     @Body() dto: UpdateGroupCategoryDto,
   ) {
     return this.userGroupService.updateGroupCategory(groupId, categoryId, dto, userInfo.id);
@@ -349,8 +355,8 @@ export class UserGroupController {
   })
   deleteGroupCategory(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
-    @Param('groupId') groupId: string,
-    @Param('categoryId') categoryId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
+    @Param('categoryId', ParseUUIDPipe) categoryId: string,
   ) {
     return this.userGroupService.deleteGroupCategory(groupId, categoryId, userInfo.id);
   }
@@ -386,7 +392,7 @@ export class UserGroupController {
   })
   async getGroupInvitations(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
-    @Param('id') groupId: string,
+    @Param('id', ParseUUIDPipe) groupId: string,
   ) {
     return await this.userGroupService.getGroupInvitations(userInfo.id, groupId);
   }

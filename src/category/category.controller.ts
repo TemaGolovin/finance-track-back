@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto';
 import { CategoryResponseEntity, CreateCategoryResponseEntity } from './entity/category.entity';
@@ -10,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
+import { GetCategoriesDto } from './dto/get-categories.dto';
 import { GetStatCategoriesDto } from './dto/get-stat-categories.dto';
 import { StatCategoriesEntity } from './entity/stat-categories.entity';
 
@@ -21,7 +32,7 @@ export class CategoryController {
   @ApiOkResponse({ type: CategoryResponseEntity, isArray: true })
   getCategories(
     @UserInfo() userInfo: { email: string; name: string; id: string },
-    @Query() { type }: { type: 'EXPENSE' | 'INCOME' },
+    @Query() { type }: GetCategoriesDto,
   ) {
     return this.categoryService.getCategories(userInfo.id, type);
   }
@@ -44,7 +55,7 @@ export class CategoryController {
   @ApiOkResponse({ type: CreateCategoryResponseEntity })
   @ApiNotFoundResponse({ description: 'Category not found', type: TemplateErrorResponse })
   getCategory(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @UserInfo() userInfo: { email: string; name: string; id: string },
   ) {
     return this.categoryService.getCategoryByIdForUser(id, userInfo.id);
@@ -66,7 +77,7 @@ export class CategoryController {
   @ApiNotFoundResponse({ description: 'Category not found', type: TemplateErrorResponse })
   updateCategory(
     @Body() categoryDto: UpdateCategoryDto,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @UserInfo() userInfo: { email: string; name: string; id: string },
   ) {
     return this.categoryService.updateCategory(id, categoryDto, userInfo.id);
@@ -76,7 +87,7 @@ export class CategoryController {
   @ApiOkResponse({ type: CreateCategoryResponseEntity })
   @ApiNotFoundResponse({ description: 'Category not found', type: TemplateErrorResponse })
   deleteCategory(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @UserInfo() userInfo: { email: string; name: string; id: string },
   ) {
     return this.categoryService.deleteCategory(id, userInfo.id);

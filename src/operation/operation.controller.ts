@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+} from '@nestjs/common';
 import { OperationService } from './operation.service';
 import { CreateOperationDto } from './dto';
 import {
@@ -35,7 +45,7 @@ export class OperationController {
   @ApiOkResponse({ type: OperationEntity })
   @ApiNotFoundResponse({ type: TemplateErrorResponse })
   getOperation(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @UserInfo() userInfo: { email: string; name: string; id: string },
   ) {
     return this.operationService.getOperationById(id, userInfo.id);
@@ -56,7 +66,7 @@ export class OperationController {
   @ApiNotFoundResponse({ type: TemplateErrorResponse })
   updateOperation(
     @Body() dto: CreateOperationDto,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @UserInfo() userInfo: { email: string; name: string; id: string },
   ) {
     return this.operationService.updateOperation(id, dto, userInfo.id);
@@ -66,7 +76,7 @@ export class OperationController {
   @ApiOkResponse({ type: UpdateOperationEntity })
   @ApiNotFoundResponse({ type: TemplateErrorResponse })
   deleteOperation(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @UserInfo() userInfo: { email: string; name: string; id: string },
   ) {
     return this.operationService.deleteOperation(id, userInfo.id);

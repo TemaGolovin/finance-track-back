@@ -4,6 +4,8 @@ import {
   Delete,
   Get,
   Headers,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -38,7 +40,10 @@ import { omitAuthTokensFromBody } from './lib/omit-access-token';
 import { JwtAuthRefreshGuard } from './guard/refresh-jwt.guard';
 import { UserRefreshInfo } from 'src/decorators/user-auth-refresh-info.decorator';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
-import { getAuthCookieOptions } from './auth-cookie.options';
+import {
+  clearAuthSessionCookies,
+  setAuthSessionCookies,
+} from './lib/auth-session-cookies';
 
 const authLoginRegistrationThrottle = {
   auth: {
@@ -49,56 +54,53 @@ const authLoginRegistrationThrottle = {
 
 @Controller('auth')
 export class AuthController {
-  private readonly authCookieOptions = getAuthCookieOptions();
-
   constructor(private readonly authService: AuthService) {}
 
   @Public()
   @UseGuards(ThrottlerGuard)
   @Throttle(authLoginRegistrationThrottle)
   @Post('registration')
+  @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: RegistrationEntity })
   @ApiConflictResponse({ description: 'name or email already exists', type: TemplateErrorResponse })
   async registration(
-    @Res() response: Response,
+    @Res({ passthrough: true }) response: Response,
     @Body() registrationDto: RegistrationDto,
     @Headers('User-agent') userAgent: string,
   ) {
     const { data } = await this.authService.registration(registrationDto, userAgent);
-
-    const { refreshToken, token } = data;
-
-    response.cookie('refreshToken', refreshToken, this.authCookieOptions);
-    response.cookie('accessToken', token, this.authCookieOptions);
-
-    return response.status(200).json(omitAuthTokensFromBody(data));
+    setAuthSessionCookies(response, {
+      refreshToken: data.refreshToken,
+      token: data.token,
+    });
+    return omitAuthTokensFromBody(data);
   }
 
   @Public()
   @UseGuards(ThrottlerGuard)
   @Throttle(authLoginRegistrationThrottle)
   @Post('login')
+  @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: LoginEntity })
   async login(
-    @Res() response: Response,
+    @Res({ passthrough: true }) response: Response,
     @Body() loginDto: LoginDto,
     @Headers('User-agent') userAgent: string,
   ) {
     const { data } = await this.authService.login(loginDto, userAgent);
-
-    const { refreshToken, token } = data;
-
-    response.cookie('refreshToken', refreshToken, this.authCookieOptions);
-    response.cookie('accessToken', token, this.authCookieOptions);
-
-    return response.status(200).json(omitAuthTokensFromBody(data));
+    setAuthSessionCookies(response, {
+      refreshToken: data.refreshToken,
+      token: data.token,
+    });
+    return omitAuthTokensFromBody(data);
   }
 
   @Public()
   @UseGuards(JwtAuthRefreshGuard)
   @Post('refresh')
+  @HttpCode(HttpStatus.OK)
   async refresh(
-    @Res() response: Response,
+    @Res({ passthrough: true }) response: Response,
     @UserRefreshInfo()
     user: {
       email: string;
@@ -110,30 +112,26 @@ export class AuthController {
     @Headers('User-agent') userAgent: string,
   ) {
     const responseData = await this.authService.refresh(user, userAgent);
-
-    const { refreshToken: newRefreshToken, token } = responseData.data;
-
-    response.cookie('refreshToken', newRefreshToken, this.authCookieOptions);
-    response.cookie('accessToken', token, this.authCookieOptions);
-
-    return response.status(200).json(omitAuthTokensFromBody(responseData.data));
+    setAuthSessionCookies(response, {
+      refreshToken: responseData.data.refreshToken,
+      token: responseData.data.token,
+    });
+    return omitAuthTokensFromBody(responseData.data);
   }
 
   @Post('logout')
+  @HttpCode(HttpStatus.OK)
   @ApiCreatedResponse({
     description: 'logout',
     content: { 'application/json': { example: { success: true } } },
   })
   async logout(
-    @Res() response: Response,
+    @Res({ passthrough: true }) response: Response,
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
     await this.authService.logout(userInfo);
-    response.clearCookie('refreshToken', this.authCookieOptions);
-    response.clearCookie('accessToken', this.authCookieOptions);
-    return response.status(200).json({
-      success: true,
-    });
+    clearAuthSessionCookies(response);
+    return { success: true };
   }
 
   @Get('me')
@@ -143,21 +141,20 @@ export class AuthController {
 
   @Patch('profile')
   async updateProfile(
-    @Res() response: Response,
+    @Res({ passthrough: true }) response: Response,
     @Body() dto: UpdateProfileDto,
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
     @Headers('User-agent') userAgent: string,
   ) {
     const { data } = await this.authService.updateProfile(userInfo, dto.name, userAgent);
-    const { refreshToken, token } = data;
-
-    response.cookie('refreshToken', refreshToken, this.authCookieOptions);
-    response.cookie('accessToken', token, this.authCookieOptions);
-
-    return response.status(200).json({
+    setAuthSessionCookies(response, {
+      refreshToken: data.refreshToken,
+      token: data.token,
+    });
+    return {
       success: true,
       data: omitAuthTokensFromBody(data),
-    });
+    };
   }
 
   @Post('change-password')
@@ -208,18 +205,18 @@ export class AuthController {
   }
 
   @Post('delete-account')
+  @HttpCode(HttpStatus.OK)
   @ApiOkResponse({
     description: 'account deleted',
     content: { 'application/json': { example: { success: true } } },
   })
   async deleteAccount(
-    @Res() response: Response,
+    @Res({ passthrough: true }) response: Response,
     @Body() dto: DeleteAccountDto,
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
     await this.authService.deleteAccount(userInfo.id, dto);
-    response.clearCookie('refreshToken', this.authCookieOptions);
-    response.clearCookie('accessToken', this.authCookieOptions);
-    return response.status(200).json({ success: true });
+    clearAuthSessionCookies(response);
+    return { success: true };
   }
 }

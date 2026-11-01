@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import {
   ApiConflictResponse,
   ApiCreatedResponse,
@@ -12,6 +12,7 @@ import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
 import { Public } from 'src/decorators/public.decorator';
 import { UserInfo } from 'src/decorators/user-auth-info.decorator';
 import { ConfirmEmailChangeDto, RequestEmailChangeDto } from './dto/email-change.dto';
+import { FindUsersByNameQueryDto } from './dto/find-users-by-name-query.dto';
 import { InviteToGroupByUserIdsDto } from './dto/invite-to-group-by-name.dto';
 import { UpdateInvitationDto } from './dto/update-invitation.dto';
 import { InvitationEntity } from './entity/invitation.entity';
@@ -28,12 +29,9 @@ export class UserController {
     isArray: true,
   })
   findUsersByUsername(
-    @Query('name') name: string,
+    @Query() { name }: FindUsersByNameQueryDto,
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
   ) {
-    if (!name) {
-      return [];
-    }
     return this.userService.findUsersByUsername(name, userInfo.id);
   }
 
@@ -110,7 +108,7 @@ export class UserController {
   @ApiQuery({ name: 'id', required: true, description: 'invitation id' })
   changeInvitationStatus(
     @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
-    @Param('id') invitationId: string,
+    @Param('id', ParseUUIDPipe) invitationId: string,
     @Body() updateDto: UpdateInvitationDto,
   ) {
     return this.userService.updateInvitation(updateDto, invitationId, userInfo.id);

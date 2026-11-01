@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsOptional } from 'class-validator';
+import { IsDateString, IsEnum, IsOptional } from 'class-validator';
 
 export class GetUserGroupStatDto {
   @IsDateString()
@@ -13,6 +13,7 @@ export class GetUserGroupStatDto {
   endDate: string;
 
   @IsOptional()
+  @IsEnum(['INCOME', 'EXPENSE'])
   @ApiProperty({ required: false, type: String, example: 'INCOME', enum: ['INCOME', 'EXPENSE'] })
   operationType: 'INCOME' | 'EXPENSE';
 }

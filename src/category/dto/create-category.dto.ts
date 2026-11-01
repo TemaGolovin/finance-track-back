@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsString, MinLength } from 'class-validator';
+import { IsEnum, IsString, Matches, MinLength } from 'class-validator';
 import { i18nValidationMessage } from 'nestjs-i18n';
 
 export class CreateCategoryDto {
@@ -25,6 +25,8 @@ export class CreateCategoryDto {
   })
   categoryType: 'INCOME' | 'EXPENSE';
 
+  @IsString()
+  @Matches(/^#[0-9A-Fa-f]{6}$/)
   @ApiProperty({
     description: 'Category color in hex format',
     example: '#FF0000',
@@ -33,6 +35,7 @@ export class CreateCategoryDto {
   })
   color: string;
 
+  @IsString()
   @ApiProperty({
     description: 'Category icon in string format',
     example: 'CategoryIcon',

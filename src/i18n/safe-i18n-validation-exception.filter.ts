@@ -26,7 +26,7 @@ export class SafeI18nValidationExceptionFilter implements ExceptionFilter {
       response.status(statusCode).send({
         statusCode,
         message,
-        error: exception.getResponse(),
+        error: 'Bad Request',
       });
     }
   }

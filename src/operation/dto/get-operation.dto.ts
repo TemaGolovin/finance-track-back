@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsEnum, IsOptional } from 'class-validator';
+import { IsDateString, IsEnum, IsOptional, IsUUID } from 'class-validator';
 
 export class GetOperationDto {
   @IsDateString()
@@ -18,6 +18,7 @@ export class GetOperationDto {
   operationType: 'INCOME' | 'EXPENSE';
 
   @IsOptional()
+  @IsUUID()
   @ApiProperty({ required: false, type: String, example: 'c8e2d4f7-8b6d-4f7b-9f6d-7b6d4f7b6d7b' })
   categoryId: string;
 }
