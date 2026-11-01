@@ -6,25 +6,9 @@
 
 Не ломает стенд само по себе, но мешает расширять API и даёт несколько экземпляров одних и тех же сервисов.
 
-### NestJS: модули, импорты и экспорты
+### ~~NestJS: модули, импорты и экспорты~~
 
-**Что:** Провайдеры соседних модулей не копировать в `providers`. Модуль экспортирует свои сервисы, потребитель подключает их через `imports`.
-
-**Сейчас:** `CategoryService` и `CategoryRepository` заново зарегистрированы в `providers` у `AuthModule`, `OperationModule`, `UserGroupModule`, `UserModule`. `UserModule` так же дублирует `UserGroupService` / `UserGroupRepository`. `CategoryModule` свои провайдеры **не экспортирует**.
-
-NestJS создаёт **отдельный экземпляр** на каждый модуль, где класс указан в `providers`. Это обход экспорта/импорта: не общий singleton из DI, а дополнительные копии модуля.
-
-**Образцы, как должно быть:** `MailModule`, `EmailTokenModule`, `PrismaModule`, `UserGroupModule` — `exports` + `imports` у потребителя.
-
-**Сделать:**
-
-1. `CategoryModule`: `exports: [CategoryService, CategoryRepository]`.
-2. Убрать `Category*` из `providers` чужих модулей; вместо этого `imports: [CategoryModule]`.
-3. `UserModule`: импортировать `UserGroupModule`, не дублировать его провайдеры.
-4. Проверить `@Global()` на `AppModule`: без `exports` он ничего не даёт. Глобальность оставить только там, где нужна (как у `PrismaModule`).
-5. Пройти остальные модули: чужие классы только через `imports`/`exports`.
-
-**Критерий:** один экземпляр каждого сервиса в DI; зависимости между доменами только через модульный контракт. Сложность: S.
+**Сделано:** `CategoryModule` экспортирует `CategoryService` и `CategoryRepository`; `AuthModule`, `OperationModule`, `UserGroupModule` подключают его через `imports`, без дубля в `providers`. `UserModule` импортирует `UserGroupModule` вместо копирования `UserGroupService` / `UserGroupRepository` (лишние `Category*` у `UserModule` убраны — сервис их не использовал). С `@AppModule` снят пустой `@Global()`; глобальным остаётся только `PrismaModule` с `exports`.
 
 ### NestJS: жизненный цикл запроса (middleware → guards → pipes → interceptors → filters)
 

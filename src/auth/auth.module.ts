@@ -7,8 +7,7 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-jwt.strategy';
 import { AuthRepository } from './auth.repository';
-import { CategoryService } from 'src/category/category.service';
-import { CategoryRepository } from 'src/category/category.repository';
+import { CategoryModule } from 'src/category/category.module';
 import { MailModule } from 'src/mail/mail.module';
 import { EmailTokenModule } from 'src/email-token/email-token.module';
 
@@ -20,15 +19,9 @@ import { EmailTokenModule } from 'src/email-token/email-token.module';
     PassportModule,
     MailModule,
     EmailTokenModule,
+    CategoryModule,
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    RefreshTokenStrategy,
-    AuthRepository,
-    CategoryService,
-    CategoryRepository,
-  ],
+  providers: [AuthService, JwtStrategy, RefreshTokenStrategy, AuthRepository],
 })
 export class AuthModule {}

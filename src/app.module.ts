@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { getAuthThrottlerModuleConfig } from './config/auth-throttle.config';
@@ -10,7 +10,6 @@ import { PrismaModule } from './prisma/prisma.module';
 import { UserGroupModule } from './user-group/user-group.module';
 import { UserModule } from './user/user.module';
 
-@Global()
 @Module({
   imports: [
     ThrottlerModule.forRoot([...getAuthThrottlerModuleConfig()]),
