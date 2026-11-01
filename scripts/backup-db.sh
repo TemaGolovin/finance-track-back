@@ -41,6 +41,20 @@ docker exec "$POSTGRES_CONTAINER_NAME" \
   pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --no-owner |
   gzip >"$outfile"
 
+if ! gzip -t "$outfile"; then
+  rm -f "$outfile"
+  echo "error: backup file failed gzip integrity check" >&2
+  exit 1
+fi
+
+min_bytes=256
+size_bytes="$(wc -c <"$outfile" | tr -d ' ')"
+if [[ "$size_bytes" -lt "$min_bytes" ]]; then
+  rm -f "$outfile"
+  echo "error: backup file too small (${size_bytes} bytes)" >&2
+  exit 1
+fi
+
 find "$BACKUPS_DIR" -type f -name '*.sql.gz' -mtime +7 -delete
 
-echo "Done. Files older than 7 days under backups/ removed."
+echo "Done: ${outfile} (${size_bytes} bytes). Files older than 7 days under backups/ removed."

@@ -85,6 +85,12 @@ docker compose -f docker-compose.prod.yml up -d --build web
 
 ## 4. Обновление версии
 
+Перед обновлением на проде/стенде сделайте дамп (см. [BACKUP_GUIDE.md](../BACKUP_GUIDE.md)):
+
+```bash
+./scripts/backup-db.sh
+```
+
 ```bash
 git pull   # в обоих репозиториях
 docker compose -f docker-compose.prod.yml up -d --build
@@ -92,7 +98,48 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 Миграции применяются сервисом `migrate` перед стартом `api`.
 
-## 5. Бэкапы БД
+Проверка после выкладки: `GET /health` у API (через nginx — только если проксируете; иначе `docker compose ... exec api wget -qO- http://127.0.0.1:3000/health`) должен вернуть `{ "status": "ok", "database": "ok" }`. При недоступной БД — **503**.
+
+## 5. Откат релиза
+
+Prisma **не умеет** откатывать уже применённые миграции (`migrate deploy` только вперёд). План зависит от того, успела ли миграция пройти.
+
+### 5.1. Код откатили, миграция **не** меняла схему (или ещё не применилась)
+
+1. В обоих репозиториях — на предыдущий коммит/тег (`git checkout <ref>` или `git revert`).
+2. Пересборка:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+3. Проверить `/health` и основные сценарии в UI.
+
+### 5.2. Миграция **уже применилась**, схема несовместима со старым кодом
+
+1. Остановить трафик (maintenance или остановить `web` / `nginx`).
+2. Откатить **код** как в §5.1.
+3. **Восстановить БД** из последнего хорошего дампа (не в ту же БД поверх данных — см. [BACKUP_GUIDE.md](../BACKUP_GUIDE.md)):
+
+```bash
+docker compose -f docker-compose.prod.yml stop api web
+./scripts/restore-db.sh backups/backup_YYYY-MM-DD_HHMMSS.sql.gz
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+4. Убедиться, что таблица `_prisma_migrations` в дампе соответствует откатываемой версии кода (иначе `migrate` снова попытается применить «лишние» миграции).
+
+### 5.3. Локальная проверка restore до прода
+
+На машине с Docker и поднятым Postgres из compose:
+
+```bash
+./scripts/verify-backup-restore.sh
+```
+
+Скрипт создаёт временную БД, восстанавливает дамп, проверяет `_prisma_migrations` и удаляет БД.
+
+## 6. Бэкапы БД
 
 См. [BACKUP_GUIDE.md](../BACKUP_GUIDE.md). Контейнер Postgres: `finance-track-postgres`.
 

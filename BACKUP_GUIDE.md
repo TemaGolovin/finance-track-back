@@ -26,17 +26,36 @@
 
 Контейнер PostgreSQL должен быть запущен. Скрипты бэкапа автоматически удаляют файлы в `backups/` старше **7 дней**.
 
-## Cron на сервере (ежедневно в 03:00)
+После `backup-db.sh` файл проверяется (`gzip -t`, минимальный размер). Неудачный дамп удаляется, скрипт завершается с ненулевым кодом.
 
-Подставьте абсолютный путь к каталогу репозитория на машине, где крутится Docker.
+## Проверка restore (локально или на стенде)
 
-Строка для `crontab -e`:
+Не перезаписывает рабочую БД: создаётся временная база, в неё восстанавливается дамп, проверяется `_prisma_migrations`, затем база удаляется.
+
+```bash
+./scripts/verify-backup-restore.sh
+# или для конкретного файла:
+./scripts/verify-backup-restore.sh backups/backup_2026-04-01_120000.sql.gz
+```
+
+Перед первым продом имеет смысл один раз прогнать эту команду на копии данных.
+
+## Контроль «свежести» дампа
+
+Для cron или отдельного systemd timer (после nightly backup):
+
+```bash
+./scripts/check-backup-freshness.sh
+```
+
+По умолчанию ошибка, если последний `.sql.gz` старше **26** часов (`BACKUP_MAX_AGE_HOURS`). Пример цепочки в crontab:
 
 ```cron
 0 3 * * * cd /ABS/PATH/TO/finance-track-back && ./scripts/backup-db.sh >> /var/log/finance-track-backup.log 2>&1
+15 3 * * * cd /ABS/PATH/TO/finance-track-back && ./scripts/check-backup-freshness.sh >> /var/log/finance-track-backup.log 2>&1
 ```
 
-К этому времени контейнер с БД должен быть поднят (например, через `restart: always` в compose или отдельный unit).
+Подставьте абсолютный путь к каталогу репозитория. К моменту backup контейнер с БД должен быть поднят (`restart: unless-stopped` в compose).
 
 ## Восстановление в непустую базу
 
