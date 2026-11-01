@@ -4,7 +4,8 @@ import request = require('supertest');
 import { AppModule } from '../src/app.module';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from 'src/auth/guard/jwt.guard';
+import { createConfiguredE2eApp } from './e2e-app';
 import { EmailTokenType, InvitationStatus } from '@prisma/client';
 import { MailService } from 'src/mail/mail.service';
 
@@ -52,7 +53,7 @@ const userForFind = {
   name: 'new user for find',
 };
 
-const groupId = '12341234-1234-4321-4321-123412341234';
+const groupId = '12341234-1234-4234-a234-123412341234';
 
 describe('UserController (e2e)', () => {
   let app: INestApplication;
@@ -62,19 +63,15 @@ describe('UserController (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-      providers: [
-        {
-          provide: APP_GUARD,
-          useValue: {
-            canActivate: (context: ExecutionContext) => {
-              const req = context.switchToHttp().getRequest();
-              req.user = mockUser;
-              return true;
-            },
-          },
-        },
-      ],
     })
+      .overrideProvider(JwtAuthGuard)
+      .useValue({
+        canActivate: (context: ExecutionContext) => {
+          const req = context.switchToHttp().getRequest();
+          req.user = mockUser;
+          return true;
+        },
+      })
       .overrideProvider(MailService)
       .useValue({
         sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
@@ -83,7 +80,7 @@ describe('UserController (e2e)', () => {
       })
       .compile();
 
-    app = moduleFixture.createNestApplication();
+    app = createConfiguredE2eApp(moduleFixture);
 
     prismaService = moduleFixture.get<PrismaService>(PrismaService);
 
@@ -131,6 +128,10 @@ describe('UserController (e2e)', () => {
     }
 
     await app.close();
+  });
+
+  it('/user/find/by-name (GET) - missing name returns 400', async () => {
+    return request(app.getHttpServer()).get('/user/find/by-name').expect(400);
   });
 
   it('/user/find/by-name (GET), - find user by name - find success', async () => {

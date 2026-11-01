@@ -1,10 +1,9 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as cookieParser from 'cookie-parser';
-import { i18nValidationErrorFactory } from 'nestjs-i18n';
 import request = require('supertest');
 import { AppModule } from '../src/app.module';
 import { MailService } from 'src/mail/mail.service';
+import { createConfiguredE2eApp } from './e2e-app';
 
 describe('Validation error response (e2e)', () => {
   let app: INestApplication;
@@ -21,13 +20,7 @@ describe('Validation error response (e2e)', () => {
       })
       .compile();
 
-    app = moduleFixture.createNestApplication();
-    app.use(cookieParser());
-    app.useGlobalPipes(
-      new ValidationPipe({
-        exceptionFactory: i18nValidationErrorFactory,
-      }),
-    );
+    app = createConfiguredE2eApp(moduleFixture);
     await app.init();
   });
 
@@ -42,7 +35,7 @@ describe('Validation error response (e2e)', () => {
     const { body } = await request(app.getHttpServer())
       .post('/auth/registration')
       .send({
-        deviceId: '12341234-1234-1234-1234-87654321',
+        deviceId: '87654321-1234-4234-a234-123456789abc',
         email,
         name: 'Validation Test',
         password: secretPassword,

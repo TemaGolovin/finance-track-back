@@ -4,7 +4,8 @@ import request = require('supertest');
 import { AppModule } from '../src/app.module';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from 'src/auth/guard/jwt.guard';
+import { createConfiguredE2eApp } from './e2e-app';
 import { CreateOperationDto } from 'src/operation/dto';
 import {
   CreateOperationEntity,
@@ -40,21 +41,18 @@ describe('OperationController (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-      providers: [
-        {
-          provide: APP_GUARD,
-          useValue: {
-            canActivate: (context: ExecutionContext) => {
-              const req = context.switchToHttp().getRequest();
-              req.user = mockUser;
-              return true;
-            },
-          },
+    })
+      .overrideProvider(JwtAuthGuard)
+      .useValue({
+        canActivate: (context: ExecutionContext) => {
+          const req = context.switchToHttp().getRequest();
+          req.user = mockUser;
+          return true;
         },
-      ],
-    }).compile();
+      })
+      .compile();
 
-    app = moduleFixture.createNestApplication();
+    app = createConfiguredE2eApp(moduleFixture);
 
     prismaService = moduleFixture.get<PrismaService>(PrismaService);
 

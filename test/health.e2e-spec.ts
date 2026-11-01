@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as cookieParser from 'cookie-parser';
+import { createConfiguredE2eApp } from './e2e-app';
 import request = require('supertest');
 import { AppModule } from '../src/app.module';
 
@@ -12,8 +12,7 @@ describe('Health (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
-    app.use(cookieParser());
+    app = createConfiguredE2eApp(moduleFixture);
     await app.init();
   });
 

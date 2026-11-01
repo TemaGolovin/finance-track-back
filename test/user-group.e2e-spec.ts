@@ -3,7 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from 'src/auth/guard/jwt.guard';
+import { createConfiguredE2eApp } from './e2e-app';
 import { CreateUserGroupDto } from 'src/user-group/dto/create-user-group.dto';
 import { UserGroupRepository } from 'src/user-group/user-group.repository';
 import request = require('supertest');
@@ -29,21 +30,18 @@ describe('UserGroupController (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-      providers: [
-        {
-          provide: APP_GUARD,
-          useValue: {
-            canActivate: (context: ExecutionContext) => {
-              const req = context.switchToHttp().getRequest();
-              req.user = mockUser;
-              return true;
-            },
-          },
+    })
+      .overrideProvider(JwtAuthGuard)
+      .useValue({
+        canActivate: (context: ExecutionContext) => {
+          const req = context.switchToHttp().getRequest();
+          req.user = mockUser;
+          return true;
         },
-      ],
-    }).compile();
+      })
+      .compile();
 
-    app = moduleFixture.createNestApplication();
+    app = createConfiguredE2eApp(moduleFixture);
 
     prismaService = moduleFixture.get<PrismaService>(PrismaService);
     userGroupRepository = moduleFixture.get<UserGroupRepository>(UserGroupRepository);
@@ -150,7 +148,7 @@ describe('UserGroupController (e2e)', () => {
   });
 
   it('/user-group/:id (GET) - get user group by id - not found', async () => {
-    return request(app.getHttpServer()).get('/user-group/random-id').expect(404);
+    return request(app.getHttpServer()).get('/user-group/random-id').expect(400);
   });
 
   it('/user-group/:id/stat (GET) - get user group stat', async () => {
@@ -296,11 +294,20 @@ describe('UserGroupController (e2e)', () => {
       });
   });
 
-  it('/user-group/:id (PATCH) - update user group - not found', async () => {
+  it('/user-group/:id (PATCH) - update user group - invalid id returns 400', async () => {
     return request(app.getHttpServer())
       .patch('/user-group/random-id')
       .send({ name: 'Updated Group' })
-      .expect(404);
+      .expect(400);
+  });
+
+  it('/user-group/:groupId/category/connect - invalid nested UUID returns 400', async () => {
+    return request(app.getHttpServer())
+      .patch(`/user-group/${userGroupId}/category/connect`)
+      .send({
+        relatedCategories: [{ groupCategoryId: 'not-a-uuid', personalCategoryId: null }],
+      })
+      .expect(400);
   });
 
   it('/user-group/:id (DELETE) - delete user group - success', async () => {

@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as cookieParser from 'cookie-parser';
+import { createConfiguredE2eApp } from './e2e-app';
 import request = require('supertest');
 import { AppModule } from '../src/app.module';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -47,7 +47,7 @@ function getCookieValue(
 }
 
 const registrationDto: Partial<RegistrationDto> = {
-  deviceId: '12341234-1234-1234-1234-87654321',
+  deviceId: '87654321-1234-4234-a234-123456789abc',
   email: 'auth-test@example.com',
   name: 'Auth Test User',
   password: 'password123',
@@ -84,19 +84,30 @@ describe('AuthController (e2e)', () => {
       })
       .compile();
 
-    app = moduleFixture.createNestApplication();
-    app.use(cookieParser());
+    app = createConfiguredE2eApp(moduleFixture);
 
     prismaService = moduleFixture.get<PrismaService>(PrismaService);
+
+    const staleUser = await prismaService.user.findUnique({
+      where: { email: registrationDto.email },
+      select: { id: true },
+    });
+    if (staleUser) {
+      await prismaService.refreshToken.deleteMany({ where: { userId: staleUser.id } });
+      await prismaService.emailToken.deleteMany({ where: { userId: staleUser.id } });
+      await prismaService.user.delete({ where: { id: staleUser.id } });
+    }
 
     await app.init();
   });
 
   afterAll(async () => {
     if (prismaService) {
-      await prismaService.refreshToken.deleteMany({
-        where: { userId: userInfo.userId },
-      });
+      if (userInfo.userId) {
+        await prismaService.refreshToken.deleteMany({
+          where: { userId: userInfo.userId },
+        });
+      }
       userInfo?.userId && (await prismaService.user.delete({ where: { id: userInfo.userId } }));
 
       await prismaService.$disconnect();
