@@ -73,22 +73,27 @@ export const createUserGroupCategories = async (
   personalCategories: Category[],
 ) => {
   return await prisma.$transaction(async (tx) => {
-    const groupCategoriesPromises = personalCategories.map((category) => {
-      return tx.groupCategory.create({
-        data: {
-          groupId,
-          name: category.name,
-          categoryType: category.categoryType,
-          defaultKey: category.defaultKey,
-          personalCategories: {
-            create: {
-              categoryId: category.id,
-              userId: category.userId,
-              groupId,
+    const groupCategoriesPromises = personalCategories.flatMap((category) => {
+      if (!category.userId) {
+        return [];
+      }
+
+      return [
+        tx.groupCategory.create({
+          data: {
+            groupId,
+            name: category.name,
+            categoryType: category.categoryType,
+            defaultKey: category.defaultKey,
+            personalCategories: {
+              create: {
+                categoryId: category.id,
+                userId: category.userId,
+              },
             },
           },
-        },
-      });
+        }),
+      ];
     });
 
     return await Promise.all(groupCategoriesPromises);
@@ -133,6 +138,16 @@ export const mapCategoryToGroup = async (
   groupId: string,
 ) => {
   return await prisma.$transaction(async (tx) => {
+    const categoriesInGroup = await tx.groupCategory.count({
+      where: {
+        groupId,
+        id: { in: relatedCategoriesIds.map((category) => category.groupCategoryId) },
+      },
+    });
+    if (categoriesInGroup !== relatedCategoriesIds.length) {
+      throw new Error('Group category is not in the group');
+    }
+
     const groupCategoriesPromises = relatedCategoriesIds.map((category) => {
       return tx.groupCategory.update({
         where: {
@@ -143,7 +158,6 @@ export const mapCategoryToGroup = async (
             create: {
               categoryId: category.categoryId,
               userId,
-              groupId,
             },
           },
         },
@@ -177,11 +191,16 @@ export const createUsersWithCategoriesAndJoinToGroup = async (prisma: PrismaClie
 
   const groupCategories = await getGroupCategoriesByGroupId(prisma, group.id);
 
-  const mappedCategoriesIds = groupCategories.map((category) => {
-    return {
-      groupCategoryId: category.id,
-      categoryId: secondUserCategories.find((cat) => cat.defaultKey === category.defaultKey)?.id,
-    };
+  const mappedCategoriesIds = groupCategories.flatMap((category) => {
+    const categoryId = secondUserCategories.find(
+      (cat) => cat.defaultKey === category.defaultKey,
+    )?.id;
+
+    if (!categoryId) {
+      return [];
+    }
+
+    return [{ groupCategoryId: category.id, categoryId }];
   });
 
   await addUserToGroup(prisma, secondUser.id, group.id);

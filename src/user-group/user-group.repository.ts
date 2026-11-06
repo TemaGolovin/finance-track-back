@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
+import { Category, OperationType, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreateUserGroupDto } from './dto/create-user-group.dto';
 import { CreateGroupCategoryDto } from './dto/create-group-category.dto';
+import { CreateUserGroupDto } from './dto/create-user-group.dto';
 import { UpdateGroupCategoryDto } from './dto/update-group-category.dto';
 import { UpdateUserGroupDto } from './dto/update-user-group.dto';
-import { Category, OperationType, Prisma } from '@prisma/client';
+
+type GroupCategoryStatRow = {
+  id: string;
+  name: string;
+  totalAmount: Prisma.Decimal | string | number;
+};
 
 @Injectable()
 export class UserGroupRepository {
@@ -149,56 +155,42 @@ export class UserGroupRepository {
     startDate?: string,
     endDate?: string,
   ) {
-    const operationDateFilter: Record<string, Date> = {};
-
-    if (startDate) {
-      operationDateFilter.gte = new Date(startDate);
-    }
-
-    if (endDate) {
-      operationDateFilter.lte = new Date(endDate);
-    }
-
-    return this.prisma.groupCategory
-      .findMany({
-        where: { groupId, categoryType },
-        include: {
-          personalCategories: {
-            include: {
-              personalCategory: {
-                include: {
-                  operations: {
-                    where: {
-                      ...(categoryType && { type: categoryType }),
-                      ...(Object.keys(operationDateFilter).length > 0 && {
-                        operationDate: operationDateFilter,
-                      }),
-                    },
-                    select: {
-                      value: true,
-                      type: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      })
-      .then((groups) =>
-        groups.map((group) => ({
-          id: group.id,
-          name: group.name,
-          totalAmount: group.personalCategories.reduce((sum: Prisma.Decimal, pc) => {
-            const categorySum = pc.personalCategory.operations.reduce(
-              (catSum: Prisma.Decimal, op) =>
-                op.type === group.categoryType ? catSum.plus(op.value) : catSum,
-              new Prisma.Decimal(0),
-            );
-            return sum.plus(categorySum);
-          }, new Prisma.Decimal(0)),
-        })),
+    const categoryFilters = [Prisma.sql`gc."groupId" = ${groupId}`];
+    if (categoryType) {
+      categoryFilters.push(
+        Prisma.sql`gc."categoryType" = CAST(${categoryType} AS "OperationType")`,
       );
+    }
+
+    const operationFilters = [
+      Prisma.sql`o."categoryId" = pcm."categoryId"`,
+      Prisma.sql`o.type = gc."categoryType"`,
+    ];
+    if (startDate) {
+      operationFilters.push(Prisma.sql`o."operationDate" >= ${new Date(startDate)}`);
+    }
+    if (endDate) {
+      operationFilters.push(Prisma.sql`o."operationDate" <= ${new Date(endDate)}`);
+    }
+
+    const rows = await this.prisma.$queryRaw<GroupCategoryStatRow[]>`
+      SELECT
+        gc.id,
+        gc.name,
+        SUM(o.value) AS "totalAmount"
+      FROM "GroupCategory" gc
+      INNER JOIN "PersonalCategoryMap" pcm ON pcm."groupCategoryId" = gc.id
+      INNER JOIN "Operation" o ON ${Prisma.join(operationFilters, ' AND ')}
+      WHERE ${Prisma.join(categoryFilters, ' AND ')}
+      GROUP BY gc.id, gc.name
+      HAVING SUM(o.value) > 0
+    `;
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      totalAmount: new Prisma.Decimal(row.totalAmount),
+    }));
   }
 
   async updateUserGroup(groupId: string, dto: UpdateUserGroupDto) {
@@ -277,7 +269,6 @@ export class UserGroupRepository {
               create: {
                 categoryId: category.id,
                 userId: category.userId,
-                groupId,
               },
             },
           },
@@ -443,11 +434,9 @@ export class UserGroupRepository {
                 create: {
                   userId,
                   categoryId: category.personalCategoryId,
-                  groupId,
                 },
                 update: {
                   categoryId: category.personalCategoryId,
-                  groupId,
                 },
               },
             },

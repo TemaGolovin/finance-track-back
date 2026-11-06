@@ -52,6 +52,8 @@ model UserRelationGroupUser {
   userId              String          
   userRelationGroup   UserRelationGroup @relation(fields: [userRelationGroupId], references: [id], onDelete: Cascade)
   userRelationGroupId String
+
+  @@unique([userId, userRelationGroupId])
 }
 
 model GroupCategory {
@@ -62,13 +64,15 @@ model GroupCategory {
   defaultKey          String?
   categoryType        OperationType   @default(EXPENSE)
   personalCategories  PersonalCategoryMap[]
-  
+
+  @@unique([id, groupId])
   @@unique([name, groupId, categoryType])
+  @@index([groupId, categoryType])
 }
 
 model PersonalCategoryMap {
   id                String            @id @default(uuid())
-  groupCategory     GroupCategory     @relation(fields: [groupCategoryId], references: [id], onDelete: Cascade)
+  groupCategory     GroupCategory     @relation(fields: [groupCategoryId, groupId], references: [id, groupId], onDelete: Cascade)
   personalCategory  Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   groupCategoryId   String
   categoryId        String
@@ -94,6 +98,9 @@ model Operation {
   operationDate   DateTime
   user            User            @relation(fields: [userId], references: [id])
   userId          String
+
+  @@index([userId, type, operationDate])
+  @@index([categoryId, type, operationDate])
 }
 
 model Category {
