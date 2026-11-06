@@ -20,6 +20,10 @@ import { ResponseWrapper } from 'src/constants/response-wrapper';
 import { EmailTokenService } from 'src/email-token/email-token.service';
 import { MailService } from 'src/mail/mail.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import {
+  getPrismaUniqueConstraintFields,
+  isPrismaUniqueConstraintViolation,
+} from 'src/prisma/unique-constraint-violation';
 import { AuthRepository } from './auth.repository';
 import {
   ChangePasswordDto,
@@ -61,12 +65,20 @@ export class AuthService {
     const salt = await genSalt(10);
     const hashPassword = await hash(registrationDto.password, salt);
 
-    const newUser = await this.prisma.user.create({
-      data: {
-        ...registrationDtoWithoutDevice,
-        password: hashPassword,
-      },
-    });
+    let newUser;
+    try {
+      newUser = await this.prisma.user.create({
+        data: {
+          ...registrationDtoWithoutDevice,
+          password: hashPassword,
+        },
+      });
+    } catch (error: unknown) {
+      this.rethrowUserUniqueConflict(error, {
+        email: registrationDto.email,
+        name: registrationDto.name,
+      });
+    }
 
     await this.categoryService.createDefaultCategories(newUser.id, groupId);
 
@@ -250,11 +262,16 @@ export class AuthService {
       );
     }
 
-    const updated = await this.prisma.user.update({
-      where: { id: user.id },
-      data: { name: trimmed },
-      select: { id: true, email: true, name: true },
-    });
+    let updated;
+    try {
+      updated = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { name: trimmed },
+        select: { id: true, email: true, name: true },
+      });
+    } catch (error: unknown) {
+      this.rethrowUserUniqueConflict(error, { name: trimmed });
+    }
 
     await this.authRepository.deleteRefreshTokenByUserIdDeviceId(user.id, user.deviceId);
 
@@ -482,11 +499,7 @@ export class AuthService {
     });
 
     if (checkUserName) {
-      throw new ConflictException(
-        this.i18n.t('errors.ALREADY_EXISTS', {
-          args: { entity: 'user', fieldName: 'name', fieldValue: name },
-        }),
-      );
+      throw this.userAlreadyExistsConflict('name', name);
     }
   }
 
@@ -498,12 +511,32 @@ export class AuthService {
     });
 
     if (checkUserEmail) {
-      throw new ConflictException(
-        this.i18n.t('errors.ALREADY_EXISTS', {
-          args: { entity: 'user', fieldName: 'email', fieldValue: email },
-        }),
-      );
+      throw this.userAlreadyExistsConflict('email', email);
     }
+  }
+
+  private userAlreadyExistsConflict(fieldName: 'email' | 'name', fieldValue: string) {
+    return new ConflictException(
+      this.i18n.t('errors.ALREADY_EXISTS', {
+        args: { entity: 'user', fieldName, fieldValue },
+      }),
+    );
+  }
+
+  private rethrowUserUniqueConflict(
+    error: unknown,
+    context: { email?: string; name?: string },
+  ): never {
+    if (isPrismaUniqueConstraintViolation(error)) {
+      const fields = getPrismaUniqueConstraintFields(error);
+      if (fields.includes('email') && context.email !== undefined) {
+        throw this.userAlreadyExistsConflict('email', context.email);
+      }
+      if (fields.includes('name') && context.name !== undefined) {
+        throw this.userAlreadyExistsConflict('name', context.name);
+      }
+    }
+    throw error;
   }
 
   private async createTokens({

@@ -2,6 +2,10 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { Prisma } from '@prisma/client';
 import { I18nService } from 'nestjs-i18n';
 import { DEFAULT_CATEGORY_TEMPLATES } from 'src/constants/default-category-templates';
+import {
+  getPrismaUniqueConstraintFields,
+  isPrismaUniqueConstraintViolation,
+} from 'src/prisma/unique-constraint-violation';
 import { CategoryRepository } from './category.repository';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto';
 import { GetStatCategoriesDto } from './dto/get-stat-categories.dto';
@@ -27,20 +31,14 @@ export class CategoryService {
     );
 
     if (categoryExists) {
-      throw new ConflictException(
-        this.i18n.t('errors.ALREADY_EXISTS', {
-          args: {
-            entity: 'Category',
-            fieldName: 'name',
-            fieldValue: categoryDto.name,
-          },
-        }),
-      );
+      throw this.categoryNameAlreadyExistsConflict(categoryDto.name);
     }
 
-    const category = await this.categoryRepository.createCategory(categoryDto, userId);
-
-    return category;
+    try {
+      return await this.categoryRepository.createCategory(categoryDto, userId);
+    } catch (error: unknown) {
+      this.rethrowCategoryNameUniqueConflict(error, categoryDto.name);
+    }
   }
 
   async updateCategory(id: string, categoryDto: UpdateCategoryDto, userId: string) {
@@ -54,18 +52,15 @@ export class CategoryService {
     );
 
     if (categoryExists) {
-      throw new ConflictException(
-        this.i18n.t('errors.ALREADY_EXISTS', {
-          args: {
-            entity: 'Category',
-            fieldName: 'name',
-            fieldValue: categoryDto.name,
-          },
-        }),
-      );
+      throw this.categoryNameAlreadyExistsConflict(categoryDto.name);
     }
 
-    const category = await this.categoryRepository.updateCategory(id, userId, categoryDto);
+    let category;
+    try {
+      category = await this.categoryRepository.updateCategory(id, userId, categoryDto);
+    } catch (error: unknown) {
+      this.rethrowCategoryNameUniqueConflict(error, categoryDto.name);
+    }
 
     if (!category) {
       throw new NotFoundException(
@@ -190,6 +185,28 @@ export class CategoryService {
     }
 
     return category;
+  }
+
+  private categoryNameAlreadyExistsConflict(name: string) {
+    return new ConflictException(
+      this.i18n.t('errors.ALREADY_EXISTS', {
+        args: {
+          entity: 'Category',
+          fieldName: 'name',
+          fieldValue: name,
+        },
+      }),
+    );
+  }
+
+  private rethrowCategoryNameUniqueConflict(error: unknown, name: string): never {
+    if (isPrismaUniqueConstraintViolation(error)) {
+      const fields = getPrismaUniqueConstraintFields(error);
+      if (fields.includes('name')) {
+        throw this.categoryNameAlreadyExistsConflict(name);
+      }
+    }
+    throw error;
   }
 
   async createDefaultCategories(userId: string, groupId?: string) {

@@ -9,6 +9,10 @@ import { I18nService } from 'nestjs-i18n';
 import { EmailTokenService } from 'src/email-token/email-token.service';
 import { MailService } from 'src/mail/mail.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import {
+  getPrismaUniqueConstraintFields,
+  isPrismaUniqueConstraintViolation,
+} from 'src/prisma/unique-constraint-violation';
 import { UserGroupService } from 'src/user-group/user-group.service';
 import { ConfirmEmailChangeDto, RequestEmailChangeDto } from './dto/email-change.dto';
 import { InviteToGroupByUserIdsDto } from './dto/invite-to-group-by-name.dto';
@@ -29,11 +33,7 @@ export class UserService {
   async requestEmailChange(userId: string, dto: RequestEmailChangeDto) {
     const existing = await this.prisma.user.findUnique({ where: { email: dto.newEmail } });
     if (existing) {
-      throw new ConflictException(
-        this.i18n.t('errors.ALREADY_EXISTS', {
-          args: { entity: 'user', fieldName: 'email', fieldValue: dto.newEmail },
-        }),
-      );
+      throw this.userEmailAlreadyExistsConflict(dto.newEmail);
     }
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -68,17 +68,17 @@ export class UserService {
 
     const existing = await this.prisma.user.findUnique({ where: { email: record.newEmail } });
     if (existing) {
-      throw new ConflictException(
-        this.i18n.t('errors.ALREADY_EXISTS', {
-          args: { entity: 'user', fieldName: 'email', fieldValue: record.newEmail },
-        }),
-      );
+      throw this.userEmailAlreadyExistsConflict(record.newEmail);
     }
 
-    await this.prisma.user.update({
-      where: { id: record.userId },
-      data: { email: record.newEmail, emailVerified: true },
-    });
+    try {
+      await this.prisma.user.update({
+        where: { id: record.userId },
+        data: { email: record.newEmail, emailVerified: true },
+      });
+    } catch (error: unknown) {
+      this.rethrowUserEmailUniqueConflict(error, record.newEmail);
+    }
 
     await this.emailTokenService.deleteToken(record.id);
 
@@ -198,5 +198,23 @@ export class UserService {
     const updatedInvitation = await this.userRepository.updateInvitation({ status }, invitationId);
 
     return updatedInvitation;
+  }
+
+  private userEmailAlreadyExistsConflict(email: string) {
+    return new ConflictException(
+      this.i18n.t('errors.ALREADY_EXISTS', {
+        args: { entity: 'user', fieldName: 'email', fieldValue: email },
+      }),
+    );
+  }
+
+  private rethrowUserEmailUniqueConflict(error: unknown, email: string): never {
+    if (isPrismaUniqueConstraintViolation(error)) {
+      const fields = getPrismaUniqueConstraintFields(error);
+      if (fields.includes('email')) {
+        throw this.userEmailAlreadyExistsConflict(email);
+      }
+    }
+    throw error;
   }
 }
