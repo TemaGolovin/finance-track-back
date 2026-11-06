@@ -8,7 +8,7 @@
 
 ### ~~NestJS: модули, импорты и экспорты~~
 
-**Сделано:** `CategoryModule` экспортирует `CategoryService` и `CategoryRepository`; `AuthModule`, `OperationModule`, `UserGroupModule` подключают его через `imports`, без дубля в `providers`. `UserModule` импортирует `UserGroupModule` вместо копирования `UserGroupService` / `UserGroupRepository` (лишние `Category*` у `UserModule` убраны — сервис их не использовал). С `@AppModule` снят пустой `@Global()`; глобальным остаётся только `PrismaModule` с `exports`.
+**Сделано:** `CategoryModule` экспортирует `CategoryService` и `CategoryRepository`; `AuthModule`, `OperationModule`, `UserGroupModule` подключают его через `imports`, без дубля в `providers`. `UserModule` импортирует `UserGroupModule` вместо копирования `UserGroupService` / `UserGroupRepository` (лишние `Category`* у `UserModule` убраны — сервис их не использовал). С `@AppModule` снят пустой `@Global()`; глобальным остаётся только `PrismaModule` с `exports`.
 
 ### ~~NestJS: жизненный цикл запроса (middleware → guards → pipes → interceptors → filters)~~
 
@@ -33,11 +33,11 @@
 
 Схема: access (15м, stateless) / refresh (7д, строка в `RefreshToken`), оба в httpOnly cookies. BFF читает их на `/api/*` и кладёт access в `Authorization: Bearer`.
 
-**Сделано:** сверка refresh с хешем (`refreshTokenMatchesStorage`: SHA-256 digest и legacy bcrypt от полного JWT) и reuse — несовпадение отзывает сессию устройства; e2e `rejects reused refresh token`. Refresh берётся из `req.cookies.refreshToken`. Опции кук в одном месте: `getAuthCookieOptions`, `setAuthSessionCookies`, `clearAuthSessionCookies`; `secure` из `COOKIE_SECURE` или `NODE_ENV=production`; `clearCookie` с теми же опциями. `path: '/'` оставлен сознательно: BFF читает refresh на всех `/api/*`, узкий path cookie до BFF не доедет. Access и refresh не отдаются в JSON (`omitAuthTokensFromBody`); BFF забирает новый access из `Set-Cookie`.
+**Сделано:** сверка refresh с хешем (`refreshTokenMatchesStorage`: SHA-256 digest и legacy bcrypt от полного JWT) и reuse — несовпадение отзывает сессию устройства; e2e `rejects reused refresh token`. Refresh берётся из `req.cookies.refreshToken`. Опции кук в одном месте: `getAuthCookieOptions`, `setAuthSessionCookies`, `clearAuthSessionCookies`; `secure` из `COOKIE_SECURE` или `NODE_ENV=production`; `clearCookie` с теми же опциями. `path: '/'` оставлен сознательно: BFF читает refresh на всех `/api/`*, узкий path cookie до BFF не доедет. Access и refresh не отдаются в JSON (`omitAuthTokensFromBody`); BFF забирает новый access из `Set-Cookie`.
 
 **Остаётся:**
 
-1. **`maxAge` кук.** В `getAuthCookieOptions` его нет: JWT живёт 15м / 7д, cookie сессионная. Поставить `maxAge` по TTL access и refresh.
+1. `maxAge` **кук.** В `getAuthCookieOptions` его нет: JWT живёт 15м / 7д, cookie сессионная. Поставить `maxAge` по TTL access и refresh.
 2. **Смена пароля не сбрасывает сессии.** `changePassword` только пишет новый хеш. Чужие `deviceId` остаются. После смены из профиля удалить refresh других устройств (текущий можно ротировать) в одной транзакции с `user.update`. `resetPassword` уже удаляет все refresh, но не атомарно — см. «Транзакции».
 3. **Логаут не убивает access.** `logout` и revoke удаляют refresh и чистят cookies. Access stateless и живёт до `exp` (~15м). Это принятый риск схемы. Denylist / `jti` — только если понадобится мгновенный отзыв access.
 
@@ -45,37 +45,11 @@
 
 **Критерий оставшегося:** cookie истекает вместе с TTL токена; смена пароля отзывает чужие refresh. Сложность: S.
 
-### Группы: личные категории, групповые и `PersonalCategoryMap`
+### ~~Группы: личные категории, групповые и `PersonalCategoryMap`~~
 
-Операции всегда личные (`userId` + `Category`). Группа не хранит свои траты: список и статистика — join через `PersonalCategoryMap` («моя личная категория в этой группе = эта `GroupCategory`»). Модель верная для семейного rollup; ниже — дыры вокруг неё, не повод переписывать на `Operation.groupId`.
+**Сделано:** операции остаются личными, группа собирает их через `PersonalCategoryMap`. Connect и создание операции сверяют доход/расход; пустой фильтр групповой категории не отдаёт весь список; выход и кик удаляют мапы в одной транзакции (`removeUserFromGroup`). Стата группы — `SUM` / `GROUP BY` в `UserGroupRepository.getUserGroupStat`, доли считаются в сервисе. Индексы: `Operation (userId, type, operationDate)`, `Operation (categoryId, type, operationDate)`, `GroupCategory (groupId, categoryType)`, unique членства `(userId, userRelationGroupId)`. Составной FK `(groupCategoryId, groupId)` → `GroupCategory (id, groupId)`; вложенная запись мапы не задаёт свой `groupId`. E2e: `test/user-group.e2e-spec.ts`.
 
-**Сейчас:** при создании группы все личные категории создателя копируются в `GroupCategory` и сразу мапятся 1:1. Новый участник без экрана connect в статистике не участвует (`defaultKey` — только автоподсказка на фронте). Unique: `(groupCategoryId, userId)` и `(groupId, categoryId, userId)`. `groupId` в мапе денормализован (дубль `GroupCategory.groupId`).
-
-
-| Приоритет | Задача                                     | Что не так                                                                                                                                                                                                                                                                   | Где                                                                                            |
-| --------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| ~~Высокий~~ | ~~**Тип категории при connect**~~          | Сделано: проверка `categoryType` в `connectGroupCategoriesToPersonalCategories`.                                                                                                                                                                                             | `UserGroupService.connectGroupCategoriesToPersonalCategories`                                  |
-| ~~Высокий~~ | ~~**Тип операции и тип категории**~~       | Сделано: сверка при `create`/`update`; в `getUserGroupStat` операции фильтруются по типу.                                                                                                                                                                                      | `OperationService`, `UserGroupRepository.getUserGroupStat`                                     |
-| Средний   | **Стата группы в Node, не в SQL**          | `getUserGroupStat` тянет все операции замапленных категорий и суммирует `Decimal` в `reduce`. При росте данных упрётесь сюда раньше, чем в схему.                                                                                                                            | `UserGroupRepository.getUserGroupStat`                                                         |
-| Средний   | **Индексы под join мапы**                  | Горячий путь `GroupCategory → Map → Category → Operation`. На `Operation` нет `@@index` (список: `userId` + `type` + `operationDate`). Unique у `GroupCategory` начинается с `name` — не обслуживает `WHERE groupId`. У членства нет unique `(userId, userRelationGroupId)`. | `schema.prisma`, `operation.repository.ts`                                                     |
-| Низкий    | **Инвариант `map.groupId`**                | Колонка нужна для unique и каскада, но «`map.groupId === groupCategory.groupId`» держит только код записи, не CHECK в БД.                                                                                                                                                    | `PersonalCategoryMap`, `connectGroupCategoriesToPersonalCategories`                            |
-
-
-**Сделать:**
-
-1. ~~**Пустой фильтр.**~~ Сделано: `getUserGroupOperations`, e2e `test/user-group.e2e-spec.ts`.
-2. ~~**Выход и кик.**~~ Сделано: транзакция в `removeUserFromGroup`, e2e в том же файле.
-3. ~~**Совпадение типа.**~~ Сделано.
-4. ~~**Тип операции.**~~ Сделано (сумма в SQL — п.5).
-5. **Сумма в БД.** Статистика группы — `SUM` / `GROUP BY` по join мапы и операций (период, тип), не загрузка строк в Nest.
-6. **Индексы под запросы, не «на всякий случай».** Кандидаты: `Operation (userId, type, operationDate)`; при фильтре по категории — `(userId, categoryId, operationDate)`; `GroupCategory (groupId, categoryType)`; unique на `(userId, userRelationGroupId)` у `UserRelationGroupUser` (сейчас одного человека можно добавить в группу дважды). Перед добавлением — `EXPLAIN` на `getUserGroupOperations` / личный список.
-7. `**groupId` в мапе.** Либо CHECK / писать `groupId` только из `GroupCategory`, либо убрать колонку и выразить unique через связь, если Prisma это позволит без боли.
-
-**Не делать:** переносить `groupId` на `Operation` и плодить групповой журнал. Мапа категории целиком — контракт продукта («в группе эта категория / не в группе»). Маппинг каждой операции — только если появится «часть трат в категории личная».
-
-**Не путать с продуктовым бэклогом:** стартовый набор `GroupCategory` сейчас = дамп категорий создателя; узкий дефолтный набор (`supermarket`, `cafe`, …) — идея, не баг схемы. Предупреждение при смене `defaultKey` — уже в «Идеи развития» (влияет только на автоподсказку новичкам, сохранённые мапы живут по UUID).
-
-**Критерий:** фильтр по групповой категории не «протекает» в полный список; вышедший участник исчезает из статы; connect и создание операции не смешивают доход/расход; стата не тащит все операции в память. Сложность: S–M (фильтр/кик/тип — S; SQL-стата и индексы — M).
+`groupId` на `Operation` не переносить: в группе категория целиком. Узкий стартовый набор `GroupCategory` (`supermarket`, `cafe`, …) — идея бэклога, не дыра схемы.
 
 ### Приглашения: повтор после отказа
 
@@ -93,26 +67,24 @@
 
 **Что не так:** несколько бизнес-действий — это 2+ отдельных запроса через `this.prisma`. Сбой посередине оставляет промежуточное состояние в БД.
 
-
 | Приоритет | Задача                     | Что не так                                                                                                                                                                                                          | Где                                                       |
 | --------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | Высокий   | **Регистрация**            | `user.create` → `createDefaultCategories` → email-токен → refresh — без транзакции. Упали категории — юзер в БД без категорий, клиент получил 500, повторная регистрация упирается в `checkUserExistsByEmail` → 409. | `AuthService.registration`                                |
 | Высокий   | **Сброс пароля**           | Смена хеша, удаление email-токена и удаление всех refresh — три отдельных запроса. Упало последнее — пароль сменён, старые (в т.ч. украденные) сессии живы; упало удаление токена — ссылка из письма переиспользуема до TTL. | `AuthService.resetPassword`                               |
-| Средний   | **Принятие приглашения**   | `addToGroup` и `updateInvitation` — отдельно. Сбой между ними: участник в группе, приглашение `PENDING`. Плюс гонка двух «принять» → дубль членства (транзакция не лечит, нужен unique — см. «Индексы под join мапы»). | `UserService` (смена статуса приглашения)                 |
+| Средний   | **Принятие приглашения**   | `addToGroup` и `updateInvitation` — отдельно. Сбой между ними: участник в группе, приглашение `PENDING`. Unique `(userId, userRelationGroupId)` уже есть: второй «принять» дубль не создаёт, но P2002 из `addToGroup` не перехватывается и клиент получает 500. | `UserService.updateInvitation`                            |
 | Средний   | **Создание группы**        | Группа создаётся одним запросом, `createInitGroupCategories` — своей транзакцией после. Упала вторая — группа без категорий и мапов.                                                                                | `UserGroupService.create`                                 |
-
 
 **Сделать:**
 
 1. **Регистрация:** `user.create` + `category.createMany` + `emailToken.create` + `refreshToken.create` в одном `$transaction`. Для этого репозиториям/сервисам принимать `tx` (`Prisma.TransactionClient`) вместо жёсткого `this.prisma`. Письмо — после коммита, как сейчас.
 2. **Сброс пароля:** `user.update` + `emailToken.delete` + `refreshToken.deleteMany` в одной транзакции. Токен «погашать» условно (`deleteMany where id + expiresAt > now` и проверка `count`), чтобы одна ссылка не сработала дважды параллельно.
-3. **Приглашение:** перевод статуса условным `updateMany where { id, status: PENDING }` → если `count === 0`, 409; добавление в группу в той же транзакции. Unique на членство — из подраздела «Группы».
+3. **Приглашение:** unique на членство уже есть. Статус и `addToGroup` — в одной транзакции. Статус переводить условным `updateMany where { id, status: PENDING }`: `count === 0` → 409. P2002 на членстве тоже отдавать как 409, не 500.
 4. **Создание группы:** группа + групповые категории + мапы в одной транзакции (либо nested write, либо `tx` в оба метода репозитория).
 5. ~~**Выход/кик из группы.**~~ Сделано: членство и мапы удаляются в одной транзакции (`removeUserFromGroup`).
 
 **Не делать:** заворачивать в транзакцию одиночные запросы и nested write — они и так атомарны. Не класть внутрь отправку писем и другие внешние побочные эффекты — их не откатить, а транзакция будет держать соединение.
 
-**Критерий:** ни одно из действий выше не оставляет «половинное» состояние при падении любого шага; повторная регистрация после 500 возможна; после сброса пароля чужих refresh нет; двойное принятие приглашения не создаёт два членства. Сложность: S–M (нужно протащить `tx` через репозитории).
+**Критерий:** ни одно из действий выше не оставляет «половинное» состояние при падении любого шага; повторная регистрация после 500 возможна; после сброса пароля чужих refresh нет; двойное принятие приглашения отвечает 409 и не оставляет приглашение `PENDING` при уже добавленном участнике. Сложность: S–M (нужно протащить `tx` через репозитории).
 
 ### Тесты: parity с prod, качество регрессий, CI
 
@@ -120,24 +92,22 @@
 
 **Сейчас:** три unit-файла (`category.service.spec`, `user-group.service.spec`, `email-token.service.spec`). E2e идут через `createConfiguredE2eApp` (`configureApp`: pipe и `cookie-parser`). В category/operation/user/user-group e2e подменяют `JwtAuthGuard` и кладут `req.user` — JWT не проверяется. `auth.e2e` покрывает публичные флоу и reuse refresh, но не `me` / `logout` / `change-password` / `sessions` / `delete-account`. Негативные кейсы `getUserGroupStat` в `user-group.service.spec` — `try/catch` без `rejects` (если исключения нет, тест проходит). CI с прогоном тестов в репозитории бэка нет.
 
-
-| Приоритет | Задача | Что не так | Где |
-| --------- | ------ | ---------- | --- |
-| ~~Высокий~~ | ~~**Общий bootstrap приложения для e2e и prod**~~ | Сделано: `configureApp` в `src/config/configure-app.ts`, e2e — `test/e2e-app.ts`. Guard — `APP_GUARD` + `useExisting` в `AuthModule`. | `src/main.ts`, `test/e2e-app.ts` |
-| Высокий | **E2e: реальный JWT на защищённых роутах** | Подмена `JwtAuthGuard` обходит Passport. Нужны сценарии: после login cookie → 200; без auth → 401; чужой ресурс → 404/403 как в prod. | `test/category.e2e-spec.ts`, `operation`, `user`, `user-group` |
-| Высокий | **Auth e2e: защищённые эндпоинты** | Публичные флоу и reuse refresh покрыты. Нет сквозняка по защищённым маршрутам. | `test/auth.e2e-spec.ts` — `GET /auth/me`, `POST /auth/logout`, `change-password`, `sessions`, `delete-account` |
-| Высокий | **Негативные unit: `rejects`, не `try/catch`** | Регресс (например сняли проверку участника группы) может не упасть. | `getUserGroupStat` в `src/user-group/user-group.service.spec.ts` |
-| ~~Средний~~ | ~~**E2e на границу валидации**~~ | Сделано: `test/validation-response.e2e-spec.ts` (нет `value`/`target`, пароль и email не утекают); `user-group` — невалидный nested UUID и path id → 400. | `test/` |
-| Средний | **CI: unit + e2e на PR/merge** | Регрессии ловятся только локально. Postgres в job (service container или compose), env из секретов/`setup-env.js`. | `.github/workflows/` в `finance-track-back` |
-| Низкий | **Unit на `getOperations` (группировка по дате)** | Логика как у stat, но без spec; e2e не проверяет несколько дат в одном ответе. | `src/operation/operation.service.ts` |
-| Низкий | **Unit на `updateInvitation` (переходы статусов)** | State machine в сервисе; частично косвенно в user e2e, без матрицы переходов. | `src/user/user.service.ts` |
-
+| Приоритет   | Задача                                                 | Что не так                                                                                                                                                | Где                                                                                                            |
+| ----------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| ~~Высокий~~ | ~~**Общий bootstrap приложения для e2e и prod**~~      | Сделано: `configureApp` в `src/config/configure-app.ts`, e2e — `test/e2e-app.ts`. Guard — `APP_GUARD` + `useExisting` в `AuthModule`.                     | `src/main.ts`, `test/e2e-app.ts`                                                                               |
+| Высокий     | **E2e: реальный JWT на защищённых роутах**             | Подмена `JwtAuthGuard` обходит Passport. Нужны сценарии: после login cookie → 200; без auth → 401; чужой ресурс → 404/403 как в prod.                     | `test/category.e2e-spec.ts`, `operation`, `user`, `user-group`                                                 |
+| Высокий     | **Auth e2e: защищённые эндпоинты**                     | Публичные флоу и reuse refresh покрыты. Нет сквозняка по защищённым маршрутам.                                                                            | `test/auth.e2e-spec.ts` — `GET /auth/me`, `POST /auth/logout`, `change-password`, `sessions`, `delete-account` |
+| Высокий     | **Негативные unit:** `rejects`**, не** `try/catch`     | Регресс (например сняли проверку участника группы) может не упасть.                                                                                       | `getUserGroupStat` в `src/user-group/user-group.service.spec.ts`                                               |
+| ~~Средний~~ | ~~**E2e на границу валидации**~~                       | Сделано: `test/validation-response.e2e-spec.ts` (нет `value`/`target`, пароль и email не утекают); `user-group` — невалидный nested UUID и path id → 400. | `test/`                                                                                                        |
+| Средний     | **CI: unit + e2e на PR/merge**                         | Регрессии ловятся только локально. Postgres в job (service container или compose), env из секретов/`setup-env.js`.                                        | `.github/workflows/` в `finance-track-back`                                                                    |
+| Низкий      | **Unit на** `getOperations` **(группировка по дате)**  | Логика как у stat, но без spec; e2e не проверяет несколько дат в одном ответе.                                                                            | `src/operation/operation.service.ts`                                                                           |
+| Низкий      | **Unit на** `updateInvitation` **(переходы статусов)** | State machine в сервисе; частично косвенно в user e2e, без матрицы переходов.                                                                             | `src/user/user.service.ts`                                                                                     |
 
 **Сделать:**
 
-1. ~~**`configureApp(app)`.**~~ Сделано.
+1. `configureApp(app)`~~**.**~~ Сделано.
 2. **Переписать e2e category/operation/user/user-group:** убрать подмену `JwtAuthGuard`; пользователь из реального login или helper «register + cookies»; минимум один тест «без cookie → 401» на защищённый GET.
-3. **Расширить `auth.e2e-spec.ts`:** цепочка login → `me` → logout; смена пароля и отзыв сессии.
+3. **Расширить** `auth.e2e-spec.ts`**:** цепочка login → `me` → logout; смена пароля и отзыв сессии.
 4. **Unit:** в `getUserGroupStat` заменить `try/catch` на `await expect(...).rejects...`. Новые unit — только формулы и правила.
 5. ~~**E2e границы валидации.**~~ Сделано для body, path и утечки полей. Отдельного теста на невалидный UUID в query нет.
 6. **Workflow:** `pnpm test` + `pnpm test:e2e`, миграции Prisma перед e2e; падение job = блок merge (если используете PR).
