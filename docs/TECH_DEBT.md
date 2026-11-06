@@ -19,65 +19,31 @@
 1. **Interceptors** — только под сквозную задачу (access-log, единая обёртка ответа после согласования с фронтом, кэш тяжёлых GET).
 2. **Единый JSON ошибок** для `HttpException` (`NotFound` / `Forbidden`) — глобальный filter, когда выровняете контракт с `TemplateErrorResponse`.
 
-### Уникальный индекс: 500 вместо ConflictException
+### ~~Уникальный индекс: 500 вместо ConflictException~~
 
-**Сейчас:** занятый email, имя или название категории сервис ловит заранее (`findUnique` / аналог) и бросает `ConflictException` — клиент получает **409** и строку из `errors.ALREADY_EXISTS`. Сама запись (`create` / `update`) ошибку уникального индекса не ловит.
+**Сделано:** P2002 на `create`/`update` в `AuthService.registration`, `AuthService.updateProfile`, `CategoryService.createCategory` / `updateCategory`, `UserService.confirmEmailChange` → тот же `ConflictException` с `errors.ALREADY_EXISTS`. Хелпер `src/prisma/unique-constraint-violation.ts`; без глобального Prisma-фильтра.
 
-**Что не так:** два запроса проходят проверку одновременно, второй упирается в `@unique` / `@@unique`. Это исключение Prisma, не класс Nest. Клиент получает **500** `Internal server error`, хотя по смыслу это тот же конфликт. `$transaction` вокруг записи это не меняет: индекс всё равно бросает исключение.
+### ~~Валидация и DTO: граница доверия~~
 
-**Где:** `AuthService.registration` (email и name), смена имени в `AuthService`, `CategoryService.createCategory` / `updateCategory`, смена email в `UserService` (`requestEmailChange`, `confirmEmailChange`).
+**Сделано:** глобальный `ValidationPipe` (`whitelist`, `forbidNonWhitelisted`, `transform`) в `configureApp`. `ConnectGroupCategoryDto.relatedCategories` — `@ValidateNested({ each: true })` + `@Type(() => RelatedCategory)`; e2e: невалидный UUID в элементе → 400. `CreateCategoryDto`: `@IsString()` на `color` и `icon`, `@Matches` для hex; те же поля есть в `UpdateCategoryDto`. `GetOperationDto.categoryId` — `@IsUUID()` + `@IsOptional()`. `ParseUUIDPipe` на path `:id` / `:groupId` / `:memberId` / `:categoryId` / `:deviceId`.
 
-**Сделать:** в этих местах поймать нарушение уникального индекса и бросить тот же `ConflictException`, что уже бросает проверка до записи. Текст `message` оставить из `errors.ALREADY_EXISTS`.
-
-**Не делать:** общий фильтр, который кладёт в ответ `message` исключения Prisma. Неожиданный сбой базы должен по-прежнему уходить как 500 `Internal server error`.
-
-**Критерий:** повторная регистрация с тем же email в гонке отвечает 409, не 500; обычная ошибка Prisma по-прежнему не светит текст базы. Сложность: S.
-
-### Валидация и DTO: граница доверия
-
-Разбор: **синтаксис** (глобальный `ValidationPipe` + `class-validator` на DTO) vs **смысл** (сервис: владение категорией, членство в группе). `@ApiProperty` — только Swagger, на pipe не влияет.
-
-Часть уже выше: `ValidationPipe` whitelist (блок «Безопасность»), `ParseUUIDPipe` и добивка DTO (подраздел «жизненный цикл»). Ниже — дыры, которые **пропускают мусор на первой границе** или **обходят вложенную валидацию**.
-
-
-| Приоритет | Задача                                            | Что не так                                                                                                                                                                                             | Где                                                |
-| --------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
-| Высокий   | **ConnectGroupCategoryDto без nested validation** | `relatedCategories` — массив без `@ValidateNested({ each: true })` и `@Type(() => RelatedCategory)`. Декораторы на вложенном классе **не применяются**; невалидные UUID в элементах проходят pipe.     | `src/user-group/dto/connect-group-category.dto.ts` |
-| Средний   | **color / icon в CreateCategoryDto**              | Поля только с `@ApiProperty`, без `@IsString()` (и без проверки формата hex у color). Любой тип в body доходит до сервиса и Prisma.                                                                    | `src/category/dto/create-category.dto.ts`          |
-| Средний   | **categoryId в GetOperationDto**                  | Опциональный фильтр без `@IsUUID()`. Строка `"abc"` проходит pipe и уходит в репозиторий.                                                                                                              | `src/operation/dto/get-operation.dto.ts`           |
-| Средний   | **ParseUUIDPipe на path-параметрах**              | `@Param('id')` как `string` в operation, category, user-group. Мусор в URL не отсекается на входе — ошибка всплывает позже (404/500). Сейчас pipe точечно только на `DELETE /auth/sessions/:deviceId`. | `*.controller.ts`                                  |
-| Низкий    | **ValidationPipe whitelist**                      | Extra-поля в body не отсекаются; контракт DTO размыт (Prisma отрежет неизвестные при записи, но `...spread` в сервисе опаснее). Уже в блоке «Безопасность».                                            | `src/main.ts`                                      |
-
-
-**Сделать:**
-
-1. **ConnectGroupCategoryDto:** `@ValidateNested({ each: true })` + `@Type(() => RelatedCategory)` на `relatedCategories`. E2e: массив с невалидным UUID → 400 до сервиса.
-2. **CreateCategoryDto:** `@IsString()` на `color` и `icon`; при необходимости `@Matches` для hex у color. Согласовать с `UpdateCategoryDto` (там color/icon пока нет — см. «критично перед тестовым деплоем»).
-3. **GetOperationDto.categoryId:** `@IsUUID()` + `@IsOptional()`.
-4. **ValidationPipe:** `whitelist: true`, `forbidNonWhitelisted: true` (или только whitelist) — вместе с п.3 из подраздела «жизненный цикл».
-5. **ParseUUIDPipe** системно на `:id`, `:groupId`, `:categoryId`, `:memberId` — вместе с п.4 из подраздела «жизненный цикл».
-
-**Не путать с доменной валидацией:** «категория существует и принадлежит userId» — задача сервиса (`requireCategoryForUser`), не DTO. DTO не должен дублировать ACL.
-
-**Критерий:** вложенные объекты в body валидируются pipe’ом; опциональные UUID в query — либо валидный UUID, либо отсутствуют; мусор в path → 400, не необработанная ошибка Prisma; лишние поля body не доходят до handler. Сложность: S.
+Доменная проверка «категория существует и принадлежит userId» остаётся в сервисе (`requireCategoryForUser`), не в DTO.
 
 ### Авторизация: JWT, cookies, refresh, logout
 
-Разбор текущей схемы: пара access (15м, stateless) / refresh (7д, строка в `RefreshToken`), оба в httpOnly cookies, BFF перекладывает access в `Authorization: Bearer`. Ниже — недостатки. Три пункта уже в «критично перед тестовым деплоем» (secure, парсинг Cookie, сверка хеша) — здесь полный список, чтобы не потерять при рефакторинге `src/auth/`.
+Схема: access (15м, stateless) / refresh (7д, строка в `RefreshToken`), оба в httpOnly cookies. BFF читает их на `/api/*` и кладёт access в `Authorization: Bearer`.
 
-**Сделать:**
+**Сделано:** сверка refresh с хешем (`refreshTokenMatchesStorage`: SHA-256 digest и legacy bcrypt от полного JWT) и reuse — несовпадение отзывает сессию устройства; e2e `rejects reused refresh token`. Refresh берётся из `req.cookies.refreshToken`. Опции кук в одном месте: `getAuthCookieOptions`, `setAuthSessionCookies`, `clearAuthSessionCookies`; `secure` из `COOKIE_SECURE` или `NODE_ENV=production`; `clearCookie` с теми же опциями. `path: '/'` оставлен сознательно: BFF читает refresh на всех `/api/*`, узкий path cookie до BFF не доедет. Access и refresh не отдаются в JSON (`omitAuthTokensFromBody`); BFF забирает новый access из `Set-Cookie`.
 
-1. **Сверка refresh с хешем и reuse detection.** В БД пишется bcrypt-хеш, при `refresh` он **не сравнивается**: достаточно валидного JWT и строки `userId`+`deviceId`. После ротации старый refresh всё ещё проходит. Сверять `compare(cookie, row.token)`; при несовпадении — считать reuse и отзывать сессию устройства (или все сессии пользователя). Уже в таблице критично; без этого ротация фиктивная.
-2. **Парсинг Cookie для refresh.** Хрупкий `split('=')` в `refresh-jwt.strategy.ts`. Заменить на `req.cookies` (`cookie-parser` уже подключён). Уже в таблице критично.
-3. `**secure` / `maxAge` / `path` cookies.** `secure: false` зашит; у `setCookie` нет `maxAge` (JWT 15м/7д, cookie — сессионная); refresh с `path: '/'` уходит на все пути, не только на `/auth/refresh`. Вынести опции в одно место; `COOKIE_SECURE` из env; `maxAge` согласовать с TTL; refresh сузить path, если BFF это позволяет. `clearCookie` вызывать с теми же `path` / `sameSite` / `secure`, иначе в части браузеров cookie не снимется.
-4. **Access в JSON.** Login / registration / refresh / profile отдают `token` в теле и дублируют его httpOnly cookie. XSS не читает cookie, но видит JSON. Не отдавать access в body, раз клиент его не сохраняет (BFF уже берёт новый access из refresh JSON только на сервере). Уже в блоке безопасности как низкий — при рефакторинге auth поднять приоритет.
-5. **Логаут не убивает access.** `logout` (и revoke сессии) удаляет refresh и чистит cookies. Access stateless: украденный/скопированный JWT живёт до `exp` (~15м). Это ограничение схемы, не баг само по себе. Если нужно «выйти везде сразу» для access — denylist/`jti` или укоротить TTL ещё сильнее; иначе явно зафиксировать как принятый риск.
-6. **Смена пароля не сбрасывает сессии.** `resetPassword` удаляет все refresh пользователя; `changePassword` только пишет новый хеш пароля. Чужие устройства остаются в системе. После смены пароля из профиля — как минимум удалить refresh **других** `deviceId` (текущий можно ротировать).
-7. **Один набор cookie-опций.** Сейчас `response.cookie(...)` скопирован в login / registration / refresh / profile. Вынести (хелпер или interceptor) — пересекается с п.1 HTTP-слоя про `@Res()`.
+**Остаётся:**
 
-**Не путать с продуктовым бэклогом:** OAuth / Passkeys — раздел «Другие способы авторизации». Rate limiting на login — блок «Безопасность».
+1. **`maxAge` кук.** В `getAuthCookieOptions` его нет: JWT живёт 15м / 7д, cookie сессионная. Поставить `maxAge` по TTL access и refresh.
+2. **Смена пароля не сбрасывает сессии.** `changePassword` только пишет новый хеш. Чужие `deviceId` остаются. После смены из профиля удалить refresh других устройств (текущий можно ротировать) в одной транзакции с `user.update`. `resetPassword` уже удаляет все refresh, но не атомарно — см. «Транзакции».
+3. **Логаут не убивает access.** `logout` и revoke удаляют refresh и чистят cookies. Access stateless и живёт до `exp` (~15м). Это принятый риск схемы. Denylist / `jti` — только если понадобится мгновенный отзыв access.
 
-**Критерий:** refresh принимается только если JWT валиден **и** хеш в БД совпал; повторно использованный refresh не выдаёт новую пару; cookies с предсказуемыми `secure`/`maxAge`/`path`; access не светится в JSON клиенту; смена пароля отзывает чужие сессии. Сложность: S–M.
+**Не путать с продуктовым бэклогом:** OAuth / Passkeys — раздел «Другие способы авторизации». Rate limiting на login уже есть.
+
+**Критерий оставшегося:** cookie истекает вместе с TTL токена; смена пароля отзывает чужие refresh. Сложность: S.
 
 ### Группы: личные категории, групповые и `PersonalCategoryMap`
 
@@ -142,7 +108,7 @@
 2. **Сброс пароля:** `user.update` + `emailToken.delete` + `refreshToken.deleteMany` в одной транзакции. Токен «погашать» условно (`deleteMany where id + expiresAt > now` и проверка `count`), чтобы одна ссылка не сработала дважды параллельно.
 3. **Приглашение:** перевод статуса условным `updateMany where { id, status: PENDING }` → если `count === 0`, 409; добавление в группу в той же транзакции. Unique на членство — из подраздела «Группы».
 4. **Создание группы:** группа + групповые категории + мапы в одной транзакции (либо nested write, либо `tx` в оба метода репозитория).
-5. **Выход/кик из группы** — вместе с п.2 «Группы»: удаление членства и мапов в одной транзакции.
+5. ~~**Выход/кик из группы.**~~ Сделано: членство и мапы удаляются в одной транзакции (`removeUserFromGroup`).
 
 **Не делать:** заворачивать в транзакцию одиночные запросы и nested write — они и так атомарны. Не класть внутрь отправку писем и другие внешние побочные эффекты — их не откатить, а транзакция будет держать соединение.
 
@@ -150,18 +116,18 @@
 
 ### Тесты: parity с prod, качество регрессий, CI
 
-Разбор: unit оправдан там, где **формулы и правила** (stat, email-token, ACL creator в группе); большая часть сервисов — оркестрация CRUD, её достаточно ловить **e2e** с реальной БД. Риск для «боевого» использования не в «мало spec на каждый метод», а в том, что e2e **не повторяют** `main.ts` и часть негативных unit **молча зелёные**.
+Разбор: unit оправдан там, где **формулы и правила** (stat, email-token, ACL creator в группе); большая часть сервисов — оркестрация CRUD, её достаточно ловить **e2e** с реальной БД. HTTP-bootstrap у e2e и prod уже общий. Остаточный риск: часть e2e подменяет JWT-guard, и два негативных unit на stat молча зелёные, если исключение не брошено.
 
-**Сейчас:** три unit-файла (`category.service.spec`, `user-group.service.spec`, `email-token.service.spec`); пять e2e (`test/*.e2e-spec.ts`). В category/operation/user/user-group e2e подменяют `APP_GUARD` и кладут `req.user` — JWT не проверяется. E2e поднимают `AppModule` без глобальных `ValidationPipe` и `JwtAuthGuard` из `main.ts`. `auth.e2e` покрывает публичные флоу, но не `me` / `logout` / `change-password` / `sessions` / `delete-account`. Негативные кейсы в `user-group.service.spec` — `try/catch` без `rejects` (если исключения нет, тест проходит). CI с прогоном тестов в репозитории бэка нет.
+**Сейчас:** три unit-файла (`category.service.spec`, `user-group.service.spec`, `email-token.service.spec`). E2e идут через `createConfiguredE2eApp` (`configureApp`: pipe и `cookie-parser`). В category/operation/user/user-group e2e подменяют `JwtAuthGuard` и кладут `req.user` — JWT не проверяется. `auth.e2e` покрывает публичные флоу и reuse refresh, но не `me` / `logout` / `change-password` / `sessions` / `delete-account`. Негативные кейсы `getUserGroupStat` в `user-group.service.spec` — `try/catch` без `rejects` (если исключения нет, тест проходит). CI с прогоном тестов в репозитории бэка нет.
 
 
 | Приоритет | Задача | Что не так | Где |
 | --------- | ------ | ---------- | --- |
-| Высокий | **Общий bootstrap приложения для e2e и prod** | Pipe, guard, `cookie-parser` живут только в `main.ts`; e2e их не подключают — валидация DTO и 401 без токена в тестах не воспроизводятся. | `src/main.ts` → вынести `configureApp(app)`; все `test/*.e2e-spec.ts` |
-| Высокий | **E2e: реальный JWT на защищённых роутах** | Mock `APP_GUARD` обходит Passport и refresh/access схему. Нужны сценарии: после login cookie/Authorization → 200; без auth → 401; чужой ресурс → 404/403 как в prod. | `test/category.e2e-spec.ts`, `operation`, `user`, `user-group`; убрать fake guard после bootstrap |
-| Высокий | **Auth e2e: защищённые эндпоинты** | Логика refresh/logout/sessions в `AuthService` без автоматической страховки. | `test/auth.e2e-spec.ts` — `GET /auth/me`, `POST /auth/logout`, `change-password`, `sessions`, `delete-account` |
-| Высокий | **Негативные unit: `rejects`, не `try/catch`** | Регресс (например сняли проверку участника группы) может не упасть. | `src/user-group/user-group.service.spec.ts`; пройти остальные spec |
-| Средний | **E2e на границу валидации** | После `configureApp` — 400 на кривой body/query (nested DTO connect, невалидный UUID в query), без утечки пароля в теле (см. «Безопасность»). | `test/` + DTO из блока «Валидация и DTO» |
+| ~~Высокий~~ | ~~**Общий bootstrap приложения для e2e и prod**~~ | Сделано: `configureApp` в `src/config/configure-app.ts`, e2e — `test/e2e-app.ts`. Guard — `APP_GUARD` + `useExisting` в `AuthModule`. | `src/main.ts`, `test/e2e-app.ts` |
+| Высокий | **E2e: реальный JWT на защищённых роутах** | Подмена `JwtAuthGuard` обходит Passport. Нужны сценарии: после login cookie → 200; без auth → 401; чужой ресурс → 404/403 как в prod. | `test/category.e2e-spec.ts`, `operation`, `user`, `user-group` |
+| Высокий | **Auth e2e: защищённые эндпоинты** | Публичные флоу и reuse refresh покрыты. Нет сквозняка по защищённым маршрутам. | `test/auth.e2e-spec.ts` — `GET /auth/me`, `POST /auth/logout`, `change-password`, `sessions`, `delete-account` |
+| Высокий | **Негативные unit: `rejects`, не `try/catch`** | Регресс (например сняли проверку участника группы) может не упасть. | `getUserGroupStat` в `src/user-group/user-group.service.spec.ts` |
+| ~~Средний~~ | ~~**E2e на границу валидации**~~ | Сделано: `test/validation-response.e2e-spec.ts` (нет `value`/`target`, пароль и email не утекают); `user-group` — невалидный nested UUID и path id → 400. | `test/` |
 | Средний | **CI: unit + e2e на PR/merge** | Регрессии ловятся только локально. Postgres в job (service container или compose), env из секретов/`setup-env.js`. | `.github/workflows/` в `finance-track-back` |
 | Низкий | **Unit на `getOperations` (группировка по дате)** | Логика как у stat, но без spec; e2e не проверяет несколько дат в одном ответе. | `src/operation/operation.service.ts` |
 | Низкий | **Unit на `updateInvitation` (переходы статусов)** | State machine в сервисе; частично косвенно в user e2e, без матрицы переходов. | `src/user/user.service.ts` |
@@ -169,12 +135,13 @@
 
 **Сделать:**
 
-1. **`configureApp(app)`** (или аналог): `ValidationPipe` + i18n factory, глобальный `JwtAuthGuard` через `APP_GUARD` + `Reflector` (см. техдолг HTTP — guard из модуля, не `new` в `main.ts`), `cookie-parser`, CORS при необходимости. `main.ts` и каждый e2e вызывают одну функцию после `createNestApplication()`.
-2. **Переписать e2e category/operation/user/user-group:** убрать подмену `APP_GUARD`; пользователь из реального login или helper «register + cookies»; минимум один тест «без cookie → 401» на защищённый GET.
-3. **Расширить `auth.e2e-spec.ts`:** цепочка login → `me` → logout; смена пароля и отзыв сессии (когда закрыт пункт про refresh-хеш в «Авторизация»).
-4. **Unit:** заменить `try/catch` на `await expect(...).rejects...` во всех негативных кейсах; при добавлении новых unit — только формулы/правила, не «каждый `if (!existing)`».
-5. **Workflow:** `pnpm test` + `pnpm test:e2e` (или npm), миграции Prisma перед e2e; падение job = блок merge (если используете PR).
+1. ~~**`configureApp(app)`.**~~ Сделано.
+2. **Переписать e2e category/operation/user/user-group:** убрать подмену `JwtAuthGuard`; пользователь из реального login или helper «register + cookies»; минимум один тест «без cookie → 401» на защищённый GET.
+3. **Расширить `auth.e2e-spec.ts`:** цепочка login → `me` → logout; смена пароля и отзыв сессии.
+4. **Unit:** в `getUserGroupStat` заменить `try/catch` на `await expect(...).rejects...`. Новые unit — только формулы и правила.
+5. ~~**E2e границы валидации.**~~ Сделано для body, path и утечки полей. Отдельного теста на невалидный UUID в query нет.
+6. **Workflow:** `pnpm test` + `pnpm test:e2e`, миграции Prisma перед e2e; падение job = блок merge (если используете PR).
 
 **Не делать:** гоняться за покрытием `%` по всему `src` (`test:cov` на thin CRUD мало что даёт); дублировать e2e и unit для одного и того же «409 если имя занято»; unit на репозитории без отдельной цели — SQL проще держать e2e-сценарием + `EXPLAIN`, когда трогаете запросы (см. «Группы»).
 
-**Критерий:** e2e и prod используют один HTTP-bootstrap; защищённый роут без JWT даёт 401 в тесте; auth-защищённые маршруты покрыты сквозняком; негативный unit падает, если сервис перестал кидать исключение; CI стабильно гоняет оба набора. Сложность: S–M (bootstrap + правка e2e — S; CI + auth matrix — M).
+**Критерий оставшегося:** защищённый роут без JWT даёт 401 в тесте; auth-защищённые маршруты покрыты сквозняком; негативный unit на stat падает, если сервис перестал кидать исключение; CI гоняет unit и e2e. Сложность: S–M.
