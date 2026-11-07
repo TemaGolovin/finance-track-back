@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -7,17 +8,12 @@ import {
 } from '@nestjs/common';
 import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { EmailTokenType } from '@prisma/client';
-import { randomUUID } from 'node:crypto';
 import { compare, genSalt, hash } from 'bcryptjs';
-import {
-  hashRefreshTokenForStorage,
-  refreshTokenMatchesStorage,
-} from './lib/refresh-token-hash';
 import { I18nService } from 'nestjs-i18n';
-import { tSafe } from 'src/i18n/t-safe';
 import { CategoryService } from 'src/category/category.service';
 import { ResponseWrapper } from 'src/constants/response-wrapper';
 import { EmailTokenService } from 'src/email-token/email-token.service';
+import { tSafe } from 'src/i18n/t-safe';
 import { MailService } from 'src/mail/mail.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
@@ -35,11 +31,9 @@ import {
   ResetPasswordDto,
   VerifyEmailDto,
 } from './dto/auth.dto';
-import {
-  LoginSessionData,
-  ProfileSessionData,
-  RegistrationSessionData,
-} from './types/auth-session-data';
+import { REFRESH_TOKEN_EXPIRES_IN, getAccessTokenExpiresIn } from './lib/auth-token-ttl';
+import { hashRefreshTokenForStorage, refreshTokenMatchesStorage } from './lib/refresh-token-hash';
+import { RegistrationSessionData } from './types/auth-session-data';
 
 @Injectable()
 export class AuthService {
@@ -65,20 +59,19 @@ export class AuthService {
     const salt = await genSalt(10);
     const hashPassword = await hash(registrationDto.password, salt);
 
-    let newUser;
-    try {
-      newUser = await this.prisma.user.create({
+    const newUser = await this.prisma.user
+      .create({
         data: {
           ...registrationDtoWithoutDevice,
           password: hashPassword,
         },
+      })
+      .catch((error: unknown) => {
+        this.rethrowUserUniqueConflict(error, {
+          email: registrationDto.email,
+          name: registrationDto.name,
+        });
       });
-    } catch (error: unknown) {
-      this.rethrowUserUniqueConflict(error, {
-        email: registrationDto.email,
-        name: registrationDto.name,
-      });
-    }
 
     await this.categoryService.createDefaultCategories(newUser.id, groupId);
 
@@ -262,16 +255,15 @@ export class AuthService {
       );
     }
 
-    let updated;
-    try {
-      updated = await this.prisma.user.update({
+    const updated = await this.prisma.user
+      .update({
         where: { id: user.id },
         data: { name: trimmed },
         select: { id: true, email: true, name: true },
+      })
+      .catch((error: unknown) => {
+        this.rethrowUserUniqueConflict(error, { name: trimmed });
       });
-    } catch (error: unknown) {
-      this.rethrowUserUniqueConflict(error, { name: trimmed });
-    }
 
     await this.authRepository.deleteRefreshTokenByUserIdDeviceId(user.id, user.deviceId);
 
@@ -299,7 +291,7 @@ export class AuthService {
     };
   }
 
-  async changePassword(user: { id: string }, dto: ChangePasswordDto) {
+  async changePassword(user: { id: string; deviceId: string }, dto: ChangePasswordDto) {
     const dbUser = await this.prisma.user.findUnique({ where: { id: user.id } });
 
     if (!dbUser) {
@@ -314,9 +306,17 @@ export class AuthService {
     const salt = await genSalt(10);
     const hashPassword = await hash(dto.newPassword, salt);
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { password: hashPassword },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
+        data: { password: hashPassword },
+      });
+      await tx.refreshToken.deleteMany({
+        where: {
+          userId: user.id,
+          deviceId: { not: user.deviceId },
+        },
+      });
     });
 
     return { success: true };
@@ -545,8 +545,7 @@ export class AuthService {
     name,
     deviceId,
   }: { id: string; email: string; name: string; deviceId: string }) {
-    const accessExpiresIn = (process.env.JWT_ACCESS_EXPIRES_IN ??
-      '15m') as JwtSignOptions['expiresIn'];
+    const accessExpiresIn = getAccessTokenExpiresIn() as JwtSignOptions['expiresIn'];
 
     const accessToken = await this.jwtService.signAsync(
       { id, deviceId, email, name },
@@ -557,7 +556,7 @@ export class AuthService {
     );
     const refreshToken = await this.jwtService.signAsync(
       { id, deviceId, name, email, jti: randomUUID() },
-      { expiresIn: '7d', secret: process.env.JWT_REFRESH_SECRET },
+      { expiresIn: REFRESH_TOKEN_EXPIRES_IN, secret: process.env.JWT_REFRESH_SECRET },
     );
 
     return {

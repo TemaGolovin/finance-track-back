@@ -1,14 +1,15 @@
-import { INestApplication } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createConfiguredE2eApp } from './e2e-app';
 import request = require('supertest');
-import { AppModule } from '../src/app.module';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { RegistrationDto } from 'src/auth/dto/auth.dto';
-import { refreshTokenMatchesStorageSync } from 'src/auth/lib/refresh-token-hash';
 import { EmailTokenType } from '@prisma/client';
-import { MailService } from 'src/mail/mail.service';
+import { RegistrationDto } from 'src/auth/dto/auth.dto';
+import { getAccessTokenMaxAgeMs, getRefreshTokenMaxAgeMs } from 'src/auth/lib/auth-token-ttl';
+import { refreshTokenMatchesStorageSync } from 'src/auth/lib/refresh-token-hash';
 import { getAuthThrottleLimit } from 'src/config/auth-throttle.config';
+import { MailService } from 'src/mail/mail.service';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { AppModule } from '../src/app.module';
 
 function normalizeSetCookieHeader(
   setCookieHeader: string | string[] | undefined,
@@ -20,7 +21,7 @@ function normalizeSetCookieHeader(
   return Array.isArray(setCookieHeader) ? setCookieHeader : [setCookieHeader];
 }
 
-function getCookieValue(
+function findCookie(
   setCookieHeader: string | string[] | undefined,
   name: string,
 ): string | undefined {
@@ -29,21 +30,48 @@ function getCookieValue(
     return undefined;
   }
 
-  for (const raw of cookies) {
+  return cookies.find((raw) => {
     const [pair] = raw.split(';');
-    const separatorIndex = pair.indexOf('=');
-    if (separatorIndex === -1) {
-      continue;
-    }
+    return pair.slice(0, pair.indexOf('=')) === name;
+  });
+}
 
-    if (pair.slice(0, separatorIndex) !== name) {
-      continue;
-    }
-
-    return pair.slice(separatorIndex + 1);
+function getCookieValue(
+  setCookieHeader: string | string[] | undefined,
+  name: string,
+): string | undefined {
+  const raw = findCookie(setCookieHeader, name);
+  if (!raw) {
+    return undefined;
   }
 
-  return undefined;
+  const [pair] = raw.split(';');
+  const separatorIndex = pair.indexOf('=');
+  if (separatorIndex === -1) {
+    return undefined;
+  }
+
+  return pair.slice(separatorIndex + 1);
+}
+
+function getCookieMaxAgeSeconds(
+  setCookieHeader: string | string[] | undefined,
+  name: string,
+): number | undefined {
+  const raw = findCookie(setCookieHeader, name);
+  if (!raw) {
+    return undefined;
+  }
+
+  const maxAgePart = raw
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.toLowerCase().startsWith('max-age='));
+  if (!maxAgePart) {
+    return undefined;
+  }
+
+  return Number(maxAgePart.slice('max-age='.length));
 }
 
 const registrationDto: Partial<RegistrationDto> = {
@@ -54,7 +82,7 @@ const registrationDto: Partial<RegistrationDto> = {
 };
 
 describe('AuthController (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let prismaService: PrismaService;
   let userInfo: {
     email: string | null;
@@ -85,6 +113,7 @@ describe('AuthController (e2e)', () => {
       .compile();
 
     app = createConfiguredE2eApp(moduleFixture);
+    app.set('trust proxy', 1);
 
     prismaService = moduleFixture.get<PrismaService>(PrismaService);
 
@@ -150,9 +179,7 @@ describe('AuthController (e2e)', () => {
         });
 
         expect(existRefreshInDB).toBeDefined();
-        expect(
-          refreshTokenMatchesStorageSync(refreshToken, existRefreshInDB.token),
-        ).toBeTruthy();
+        expect(refreshTokenMatchesStorageSync(refreshToken, existRefreshInDB.token)).toBeTruthy();
       });
   });
 
@@ -172,6 +199,12 @@ describe('AuthController (e2e)', () => {
 
         expect(refreshToken).toBeDefined();
         expect(accessToken).toBeDefined();
+        expect(getCookieMaxAgeSeconds(header['set-cookie'], 'accessToken')).toBe(
+          Math.floor(getAccessTokenMaxAgeMs() / 1000),
+        );
+        expect(getCookieMaxAgeSeconds(header['set-cookie'], 'refreshToken')).toBe(
+          Math.floor(getRefreshTokenMaxAgeMs() / 1000),
+        );
         expect(body.email).toBe(userInfo.email);
         expect(body.id).toBe(userInfo.userId);
         expect(body?.token).toBeUndefined();
@@ -225,12 +258,10 @@ describe('AuthController (e2e)', () => {
     });
     expect(sessionBeforeReuse).toBeDefined();
     expect(staleRefresh).not.toBe(userInfo.refreshToken);
-    expect(
-      refreshTokenMatchesStorageSync(userInfo.refreshToken, sessionBeforeReuse.token),
-    ).toBe(true);
-    expect(
-      refreshTokenMatchesStorageSync(staleRefresh, sessionBeforeReuse.token),
-    ).toBe(false);
+    expect(refreshTokenMatchesStorageSync(userInfo.refreshToken, sessionBeforeReuse.token)).toBe(
+      true,
+    );
+    expect(refreshTokenMatchesStorageSync(staleRefresh, sessionBeforeReuse.token)).toBe(false);
 
     await request(app.getHttpServer())
       .post('/auth/refresh')
@@ -349,6 +380,75 @@ describe('AuthController (e2e)', () => {
       .post('/auth/reset-password')
       .send({ token: 'invalid-token-xyz', newPassword: 'somePassword123' })
       .expect(400);
+  });
+
+  it('/auth/change-password - revokes refresh tokens of other devices (POST)', async () => {
+    const otherDeviceId = '11111111-2222-4333-8444-555555555555';
+
+    const currentLogin = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: userInfo.email,
+        password: userInfo.password,
+        deviceId: registrationDto.deviceId,
+      })
+      .set('user-agent', 'current-device')
+      .set('X-Forwarded-For', '203.0.113.20')
+      .expect(200);
+
+    const currentAccessToken = getCookieValue(currentLogin.header['set-cookie'], 'accessToken');
+    const currentRefreshToken = getCookieValue(currentLogin.header['set-cookie'], 'refreshToken');
+    expect(currentAccessToken).toBeDefined();
+    expect(currentRefreshToken).toBeDefined();
+
+    const otherLogin = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: userInfo.email,
+        password: userInfo.password,
+        deviceId: otherDeviceId,
+      })
+      .set('user-agent', 'other-device')
+      .set('X-Forwarded-For', '203.0.113.20')
+      .expect(200);
+
+    const otherRefreshToken = getCookieValue(otherLogin.header['set-cookie'], 'refreshToken');
+    expect(otherRefreshToken).toBeDefined();
+
+    const sessionsBefore = await prismaService.refreshToken.findMany({
+      where: { userId: userInfo.userId },
+    });
+    expect(sessionsBefore).toHaveLength(2);
+
+    const newPassword = 'changedPassword789';
+    await request(app.getHttpServer())
+      .post('/auth/change-password')
+      .set('Cookie', [`accessToken=${currentAccessToken}`])
+      .send({
+        currentPassword: userInfo.password,
+        newPassword,
+      })
+      .expect(201);
+
+    const sessionsAfter = await prismaService.refreshToken.findMany({
+      where: { userId: userInfo.userId },
+    });
+    expect(sessionsAfter).toHaveLength(1);
+    expect(sessionsAfter[0].deviceId).toBe(registrationDto.deviceId);
+    expect(refreshTokenMatchesStorageSync(currentRefreshToken, sessionsAfter[0].token)).toBe(true);
+
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', [`accessToken=${currentAccessToken}`])
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/auth/refresh')
+      .set('Cookie', [`refreshToken=${otherRefreshToken}`])
+      .expect(401);
+
+    userInfo.password = newPassword;
+    userInfo.refreshToken = currentRefreshToken;
   });
 
   it('/auth/login - rate limited after too many attempts (POST)', async () => {

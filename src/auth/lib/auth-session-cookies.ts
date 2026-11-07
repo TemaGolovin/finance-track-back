@@ -1,17 +1,20 @@
 import type { Response } from 'express';
-import { getAuthCookieOptions } from '../auth-cookie.options';
+import {
+  getAccessTokenCookieOptions,
+  getAuthCookieClearOptions,
+  getRefreshTokenCookieOptions,
+} from '../auth-cookie.options';
 
 export function setAuthSessionCookies(
   response: Response,
   tokens: { refreshToken: string; token: string },
 ): void {
-  const cookieOptions = getAuthCookieOptions();
-  response.cookie('refreshToken', tokens.refreshToken, cookieOptions);
-  response.cookie('accessToken', tokens.token, cookieOptions);
+  response.cookie('refreshToken', tokens.refreshToken, getRefreshTokenCookieOptions());
+  response.cookie('accessToken', tokens.token, getAccessTokenCookieOptions());
 }
 
 export function clearAuthSessionCookies(response: Response): void {
-  const cookieOptions = getAuthCookieOptions();
+  const cookieOptions = getAuthCookieClearOptions();
   response.clearCookie('refreshToken', cookieOptions);
   response.clearCookie('accessToken', cookieOptions);
 }
