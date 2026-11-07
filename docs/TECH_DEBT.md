@@ -43,15 +43,9 @@
 
 `groupId` на `Operation` не переносить: в группе категория целиком. Узкий стартовый набор `GroupCategory` (`supermarket`, `cafe`, …) — идея бэклога, не дыра схемы.
 
-### Приглашения: повтор после отказа
+### ~~Приглашения: повтор после отказа~~
 
-**Сейчас:** `Invitation` имеет `@@unique([recipientId, groupId], name: "active_invitation")`. Имя говорит «одно активное», ограничение действует на **любой** статус.
-
-**Что не так:** после `DECLINED` или `CANCELLED` новую строку тому же человеку в ту же группу вставить нельзя — `createInvitation` падает по unique. Повторно позвать в группу невозможно, пока старая строка жива.
-
-**Сделано:** partial unique `Invitation_recipientId_groupId_pending_key` (`WHERE status = 'PENDING'`), миграция `20260401120000_invitation_pending_unique`. E2e: повторный `POST /user/invitation` после `CANCELLED`.
-
-**Критерий:** отклонившего можно пригласить снова; двух `PENDING` на пару (человек, группа) нет. Сложность: S.
+**Сделано:** partial unique `Invitation_recipientId_groupId_pending_key` (`WHERE status = 'PENDING'`), миграция `20260401120000_invitation_pending_unique`. Повторный `POST /user/invitation` после `CANCELLED` и `DECLINED` — 201. Второй `PENDING` на ту же пару — `ConflictException` (`errors.ALREADY_EXISTS`), не 500. E2e: `test/user.e2e-spec.ts`.
 
 ### Транзакции: многошаговые записи без атомарности
 
