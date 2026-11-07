@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { EmailTokenType } from '@prisma/client';
+import { EmailTokenType, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { EmailTokenService } from './email-token.service';
 
@@ -25,10 +25,7 @@ describe('EmailTokenService', () => {
     jest.restoreAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        EmailTokenService,
-        { provide: PrismaService, useValue: prismaMock },
-      ],
+      providers: [EmailTokenService, { provide: PrismaService, useValue: prismaMock }],
     }).compile();
 
     service = module.get<EmailTokenService>(EmailTokenService);
@@ -83,6 +80,23 @@ describe('EmailTokenService', () => {
       expect(data.userId).toBe('user-42');
       expect(data.type).toBe(EmailTokenType.RESET_PASSWORD);
     });
+
+    it('writes deleteMany and create through the transaction client', async () => {
+      const txDeleteMany = jest.fn().mockResolvedValue({ count: 0 });
+      const txCreate = jest.fn().mockResolvedValue({ id: '1', token: 'tok' });
+      const tx = {
+        emailToken: { deleteMany: txDeleteMany, create: txCreate },
+      } as unknown as Prisma.TransactionClient;
+
+      await service.createToken('user-1', EmailTokenType.VERIFY_EMAIL, undefined, tx);
+
+      expect(txDeleteMany).toHaveBeenCalledWith({
+        where: { userId: 'user-1', type: EmailTokenType.VERIFY_EMAIL },
+      });
+      expect(txCreate).toHaveBeenCalled();
+      expect(prismaMock.emailToken.deleteMany).not.toHaveBeenCalled();
+      expect(prismaMock.emailToken.create).not.toHaveBeenCalled();
+    });
   });
 
   describe('findValidToken', () => {
@@ -103,9 +117,9 @@ describe('EmailTokenService', () => {
         userId: 'user-1',
       });
 
-      await expect(
-        service.findValidToken('tok', EmailTokenType.VERIFY_EMAIL),
-      ).rejects.toThrow(new BadRequestException('Invalid token'));
+      await expect(service.findValidToken('tok', EmailTokenType.VERIFY_EMAIL)).rejects.toThrow(
+        new BadRequestException('Invalid token'),
+      );
     });
 
     it('deletes token and throws BadRequestException when token is expired', async () => {
@@ -119,9 +133,9 @@ describe('EmailTokenService', () => {
       prismaMock.emailToken.findUnique.mockResolvedValue(expired);
       prismaMock.emailToken.delete.mockResolvedValue(expired);
 
-      await expect(
-        service.findValidToken('expired', EmailTokenType.VERIFY_EMAIL),
-      ).rejects.toThrow(new BadRequestException('Token expired'));
+      await expect(service.findValidToken('expired', EmailTokenType.VERIFY_EMAIL)).rejects.toThrow(
+        new BadRequestException('Token expired'),
+      );
 
       expect(prismaMock.emailToken.delete).toHaveBeenCalledWith({ where: { id: '1' } });
     });
@@ -150,6 +164,51 @@ describe('EmailTokenService', () => {
       await service.deleteToken('1');
 
       expect(prismaMock.emailToken.delete).toHaveBeenCalledWith({ where: { id: '1' } });
+    });
+  });
+
+  describe('deleteUnexpiredToken', () => {
+    const now = new Date('2026-01-01T00:00:00.000Z');
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(now);
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('deletes the token only while it is unexpired', async () => {
+      prismaMock.emailToken.deleteMany.mockResolvedValue({ count: 1 });
+
+      await service.deleteUnexpiredToken('token-1');
+
+      expect(prismaMock.emailToken.deleteMany).toHaveBeenCalledWith({
+        where: { id: 'token-1', expiresAt: { gt: now } },
+      });
+    });
+
+    it('throws when the token was already used or expired', async () => {
+      prismaMock.emailToken.deleteMany.mockResolvedValue({ count: 0 });
+
+      await expect(service.deleteUnexpiredToken('token-1')).rejects.toThrow(
+        new BadRequestException('Invalid token'),
+      );
+    });
+
+    it('uses the transaction client when it is passed', async () => {
+      const txDeleteMany = jest.fn().mockResolvedValue({ count: 1 });
+      const tx = {
+        emailToken: { deleteMany: txDeleteMany },
+      } as unknown as Prisma.TransactionClient;
+
+      await service.deleteUnexpiredToken('token-1', tx);
+
+      expect(txDeleteMany).toHaveBeenCalledWith({
+        where: { id: 'token-1', expiresAt: { gt: now } },
+      });
+      expect(prismaMock.emailToken.deleteMany).not.toHaveBeenCalled();
     });
   });
 });

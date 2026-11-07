@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { getRefreshTokenMaxAgeMs } from './lib/auth-token-ttl';
 
@@ -11,13 +12,16 @@ export class AuthRepository {
     deviceId,
     userAgent,
     hashedRefreshToken,
+    tx,
   }: {
     userId: string;
     deviceId: string;
     userAgent: string;
     hashedRefreshToken: string;
+    tx?: Prisma.TransactionClient;
   }) {
-    await this.prisma.refreshToken.create({
+    const db = tx ?? this.prisma;
+    await db.refreshToken.create({
       data: {
         deviceId,
         expiresAt: new Date(Date.now() + getRefreshTokenMaxAgeMs()),

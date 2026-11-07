@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { EmailTokenType } from '@prisma/client';
+import { EmailTokenType, Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 const TTL_24H = 24 * 60 * 60 * 1000;
@@ -9,12 +9,18 @@ const TTL_1H = 60 * 60 * 1000;
 export class EmailTokenService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async createToken(userId: string, type: EmailTokenType, newEmail?: string) {
-    await this.prisma.emailToken.deleteMany({ where: { userId, type } });
+  async createToken(
+    userId: string,
+    type: EmailTokenType,
+    newEmail?: string,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    await db.emailToken.deleteMany({ where: { userId, type } });
 
     const ttl = type === EmailTokenType.RESET_PASSWORD ? TTL_1H : TTL_24H;
 
-    return this.prisma.emailToken.create({
+    return db.emailToken.create({
       data: {
         userId,
         type,
@@ -39,7 +45,19 @@ export class EmailTokenService {
     return record;
   }
 
-  async deleteToken(id: string) {
-    await this.prisma.emailToken.delete({ where: { id } });
+  async deleteToken(id: string, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    await db.emailToken.delete({ where: { id } });
+  }
+
+  async deleteUnexpiredToken(id: string, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    const deleted = await db.emailToken.deleteMany({
+      where: { id, expiresAt: { gt: new Date() } },
+    });
+
+    if (deleted.count === 0) {
+      throw new BadRequestException('Invalid token');
+    }
   }
 }

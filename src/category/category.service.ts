@@ -55,12 +55,11 @@ export class CategoryService {
       throw this.categoryNameAlreadyExistsConflict(categoryDto.name);
     }
 
-    let category;
-    try {
-      category = await this.categoryRepository.updateCategory(id, userId, categoryDto);
-    } catch (error: unknown) {
-      this.rethrowCategoryNameUniqueConflict(error, categoryDto.name);
-    }
+    const category = await this.categoryRepository
+      .updateCategory(id, userId, categoryDto)
+      .catch((error: unknown) => {
+        this.rethrowCategoryNameUniqueConflict(error, categoryDto.name);
+      });
 
     if (!category) {
       throw new NotFoundException(
@@ -209,7 +208,7 @@ export class CategoryService {
     throw error;
   }
 
-  async createDefaultCategories(userId: string, groupId?: string) {
+  async createDefaultCategories(userId: string, groupId?: string, tx?: Prisma.TransactionClient) {
     const data = DEFAULT_CATEGORY_TEMPLATES.map((t) => ({
       name: this.i18n.t(`defaultCategories.${t.defaultKey}`),
       categoryType: t.categoryType,
@@ -219,7 +218,6 @@ export class CategoryService {
       icon: t.icon,
       ...(groupId ? { groupId } : {}),
     }));
-    return await this.categoryRepository.createDefaultsCategories(data);
+    return await this.categoryRepository.createDefaultsCategories(data, tx);
   }
-
 }

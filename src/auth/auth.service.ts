@@ -58,13 +58,44 @@ export class AuthService {
 
     const salt = await genSalt(10);
     const hashPassword = await hash(registrationDto.password, salt);
+    const userId = randomUUID();
 
-    const newUser = await this.prisma.user
-      .create({
-        data: {
-          ...registrationDtoWithoutDevice,
-          password: hashPassword,
-        },
+    const tokens = await this.createTokens({
+      id: userId,
+      email: registrationDto.email,
+      name: registrationDto.name,
+      deviceId,
+    });
+    const hashedRefreshToken = await hashRefreshTokenForStorage(tokens.refreshToken);
+
+    const newUser = await this.prisma
+      .$transaction(async (tx) => {
+        const createdUser = await tx.user.create({
+          data: {
+            id: userId,
+            ...registrationDtoWithoutDevice,
+            password: hashPassword,
+          },
+        });
+
+        await this.categoryService.createDefaultCategories(createdUser.id, groupId, tx);
+
+        const emailToken = await this.emailTokenService.createToken(
+          createdUser.id,
+          EmailTokenType.VERIFY_EMAIL,
+          undefined,
+          tx,
+        );
+
+        await this.authRepository.createRefreshToken({
+          userId: createdUser.id,
+          deviceId,
+          userAgent,
+          hashedRefreshToken,
+          tx,
+        });
+
+        return { createdUser, emailToken };
       })
       .catch((error: unknown) => {
         this.rethrowUserUniqueConflict(error, {
@@ -73,31 +104,15 @@ export class AuthService {
         });
       });
 
-    await this.categoryService.createDefaultCategories(newUser.id, groupId);
-
-    const emailToken = await this.emailTokenService.createToken(
-      newUser.id,
-      EmailTokenType.VERIFY_EMAIL,
-    );
     void this.mailService
-      .sendVerificationEmail(newUser.email, newUser.name, emailToken.token)
+      .sendVerificationEmail(
+        newUser.createdUser.email,
+        newUser.createdUser.name,
+        newUser.emailToken.token,
+      )
       .catch(() => null);
 
-    const { password, ...userData } = newUser;
-
-    const tokens = await this.createTokens({
-      id: userData.id,
-      email: userData.email,
-      name: userData.name,
-      deviceId: deviceId,
-    });
-
-    await this.saveRefreshToken({
-      refreshToken: tokens.refreshToken,
-      userId: userData.id,
-      deviceId,
-      userAgent,
-    });
+    const { password, ...userData } = newUser.createdUser;
 
     return {
       success: true,
@@ -414,14 +429,16 @@ export class AuthService {
     const salt = await genSalt(10);
     const hashPassword = await hash(dto.newPassword, salt);
 
-    await this.prisma.user.update({
-      where: { id: record.userId },
-      data: { password: hashPassword },
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: record.userId },
+        data: { password: hashPassword },
+      });
+
+      await this.emailTokenService.deleteUnexpiredToken(record.id, tx);
+
+      await tx.refreshToken.deleteMany({ where: { userId: record.userId } });
     });
-
-    await this.emailTokenService.deleteToken(record.id);
-
-    await this.prisma.refreshToken.deleteMany({ where: { userId: record.userId } });
 
     return { success: true };
   }

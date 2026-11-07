@@ -103,8 +103,12 @@ export class CategoryRepository {
     });
   }
 
-  async createDefaultsCategories(data: Prisma.CategoryCreateManyInput[]) {
-    return await this.prisma.category.createMany({
+  async createDefaultsCategories(
+    data: Prisma.CategoryCreateManyInput[],
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return await db.category.createMany({
       data,
     });
   }

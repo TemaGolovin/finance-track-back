@@ -7,6 +7,7 @@ import { RegistrationDto } from 'src/auth/dto/auth.dto';
 import { getAccessTokenMaxAgeMs, getRefreshTokenMaxAgeMs } from 'src/auth/lib/auth-token-ttl';
 import { refreshTokenMatchesStorageSync } from 'src/auth/lib/refresh-token-hash';
 import { getAuthThrottleLimit } from 'src/config/auth-throttle.config';
+import { DEFAULT_CATEGORY_TEMPLATES } from 'src/constants/default-category-templates';
 import { MailService } from 'src/mail/mail.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { AppModule } from '../src/app.module';
@@ -180,6 +181,16 @@ describe('AuthController (e2e)', () => {
 
         expect(existRefreshInDB).toBeDefined();
         expect(refreshTokenMatchesStorageSync(refreshToken, existRefreshInDB.token)).toBeTruthy();
+
+        const categories = await prismaService.category.findMany({
+          where: { userId: body.id },
+        });
+        expect(categories).toHaveLength(DEFAULT_CATEGORY_TEMPLATES.length);
+
+        const emailToken = await prismaService.emailToken.findFirst({
+          where: { userId: body.id, type: EmailTokenType.VERIFY_EMAIL },
+        });
+        expect(emailToken).toBeTruthy();
       });
   });
 
@@ -359,20 +370,47 @@ describe('AuthController (e2e)', () => {
   it('/auth/reset-password - resets password with valid token (POST)', async () => {
     const newPassword = 'newPassword456';
 
-    return request(app.getHttpServer())
+    await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: userInfo.email,
+        password: userInfo.password,
+        deviceId: registrationDto.deviceId,
+      })
+      .set('user-agent', 'reset-session')
+      .set('X-Forwarded-For', '203.0.113.40')
+      .expect(200);
+
+    const refreshBefore = await prismaService.refreshToken.findMany({
+      where: { userId: userInfo.userId },
+    });
+    expect(refreshBefore.length).toBeGreaterThan(0);
+
+    const { body } = await request(app.getHttpServer())
       .post('/auth/reset-password')
       .send({ token: resetPasswordToken, newPassword })
-      .expect(201)
-      .then(async ({ body }) => {
-        expect(body.success).toBe(true);
+      .expect(201);
 
-        const refreshTokens = await prismaService.refreshToken.findMany({
-          where: { userId: userInfo.userId },
-        });
-        expect(refreshTokens).toHaveLength(0);
+    expect(body.success).toBe(true);
 
-        userInfo.password = newPassword;
-      });
+    const refreshTokens = await prismaService.refreshToken.findMany({
+      where: { userId: userInfo.userId },
+    });
+    expect(refreshTokens).toHaveLength(0);
+
+    userInfo.password = newPassword;
+  });
+
+  it('/auth/reset-password - reused token is rejected (POST)', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/reset-password')
+      .send({ token: resetPasswordToken, newPassword: 'anotherPassword789' })
+      .expect(400);
+
+    const refreshTokens = await prismaService.refreshToken.findMany({
+      where: { userId: userInfo.userId },
+    });
+    expect(refreshTokens).toHaveLength(0);
   });
 
   it('/auth/reset-password - invalid token returns 400 (POST)', async () => {
