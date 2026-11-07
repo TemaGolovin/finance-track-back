@@ -29,21 +29,13 @@
 
 Доменная проверка «категория существует и принадлежит userId» остаётся в сервисе (`requireCategoryForUser`), не в DTO.
 
-### Авторизация: JWT, cookies, refresh, logout
+### ~~Авторизация: JWT, cookies, refresh, logout~~
 
 Схема: access (15м, stateless) / refresh (7д, строка в `RefreshToken`), оба в httpOnly cookies. BFF читает их на `/api/*` и кладёт access в `Authorization: Bearer`.
 
-**Сделано:** сверка refresh с хешем (`refreshTokenMatchesStorage`: SHA-256 digest и legacy bcrypt от полного JWT) и reuse — несовпадение отзывает сессию устройства; e2e `rejects reused refresh token`. Refresh берётся из `req.cookies.refreshToken`. Опции кук в одном месте: `getAuthCookieOptions`, `setAuthSessionCookies`, `clearAuthSessionCookies`; `secure` из `COOKIE_SECURE` или `NODE_ENV=production`; `clearCookie` с теми же опциями. `path: '/'` оставлен сознательно: BFF читает refresh на всех `/api/`*, узкий path cookie до BFF не доедет. Access и refresh не отдаются в JSON (`omitAuthTokensFromBody`); BFF забирает новый access из `Set-Cookie`.
-
-**Остаётся:**
-
-1. `maxAge` **кук.** В `getAuthCookieOptions` его нет: JWT живёт 15м / 7д, cookie сессионная. Поставить `maxAge` по TTL access и refresh.
-2. **Смена пароля не сбрасывает сессии.** `changePassword` только пишет новый хеш. Чужие `deviceId` остаются. После смены из профиля удалить refresh других устройств (текущий можно ротировать) в одной транзакции с `user.update`. `resetPassword` уже удаляет все refresh, но не атомарно — см. «Транзакции».
-3. **Логаут не убивает access.** `logout` и revoke удаляют refresh и чистят cookies. Access stateless и живёт до `exp` (~15м). Это принятый риск схемы. Denylist / `jti` — только если понадобится мгновенный отзыв access.
+**Сделано:** сверка refresh с хешем (`refreshTokenMatchesStorage`: SHA-256 digest и legacy bcrypt от полного JWT) и reuse — несовпадение отзывает сессию устройства; e2e `rejects reused refresh token`. Refresh берётся из `req.cookies.refreshToken`. Опции кук в одном месте: `getAccessTokenCookieOptions`, `getRefreshTokenCookieOptions`, `setAuthSessionCookies`, `clearAuthSessionCookies`; `secure` из `COOKIE_SECURE` или `NODE_ENV=production`; `clearCookie` с теми же path / httpOnly / sameSite / secure, без `maxAge` (иначе `Max-Age` перебивает истечение). `path: '/'` оставлен сознательно: BFF читает refresh на всех `/api/*`, узкий path cookie до BFF не доедет. Access и refresh не отдаются в JSON (`omitAuthTokensFromBody`); BFF забирает новый access из `Set-Cookie`. `maxAge` access и refresh совпадает с TTL JWT (`JWT_ACCESS_EXPIRES_IN`, по умолчанию `15m`, и `7d`); тот же TTL у `expiresIn` refresh и `RefreshToken.expiresAt`. `changePassword` в одной транзакции пишет новый хеш и удаляет refresh других `deviceId`; текущая сессия остаётся. Логаут и revoke удаляют refresh и чистят cookies. Access stateless и живёт до `exp` (~15м) — принятый риск схемы, denylist / `jti` не делаем, пока не понадобится мгновенный отзыв access. `resetPassword` по-прежнему удаляет все refresh не атомарно — см. «Транзакции».
 
 **Не путать с продуктовым бэклогом:** OAuth / Passkeys — раздел «Другие способы авторизации». Rate limiting на login уже есть.
-
-**Критерий оставшегося:** cookie истекает вместе с TTL токена; смена пароля отзывает чужие refresh. Сложность: S.
 
 ### ~~Группы: личные категории, групповые и `PersonalCategoryMap`~~
 
