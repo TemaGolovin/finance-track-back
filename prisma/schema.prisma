@@ -141,6 +141,8 @@ model RefreshToken {
   @@unique([userId, deviceId])
 }
 
+/// One PENDING row per (recipientId, groupId): partial unique
+/// Invitation_recipientId_groupId_pending_key in migration 20260401120000.
 model Invitation {
   id           String           @id @default(uuid())
   sender       User             @relation(name: "SentInvitations", fields: [senderId], references: [id])

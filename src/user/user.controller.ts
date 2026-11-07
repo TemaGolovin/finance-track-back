@@ -51,7 +51,7 @@ export class UserController {
     },
   })
   @ApiConflictResponse({
-    description: 'when user invite himself',
+    description: 'self-invite, or a PENDING invitation for this recipient and group already exists',
     type: TemplateErrorResponse,
     example: { message: "You can't invite yourself", statusCode: 409, error: 'Conflict' },
   })

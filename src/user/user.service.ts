@@ -119,13 +119,15 @@ export class UserService {
       throw new ForbiddenException(this.i18n.t('user.FORBIDDEN_INVITATION_THIS_GROUP'));
     }
 
-    const invitations = await this.userRepository.createInvitations({
-      groupId,
-      recipientId: userIds,
-      senderId,
-    });
-
-    return invitations;
+    try {
+      return await this.userRepository.createInvitations({
+        groupId,
+        recipientId: userIds,
+        senderId,
+      });
+    } catch (error: unknown) {
+      this.rethrowPendingInvitationConflict(error);
+    }
   }
 
   async getInvitations(userId: string) {
@@ -214,6 +216,24 @@ export class UserService {
       if (fields.includes('email')) {
         throw this.userEmailAlreadyExistsConflict(email);
       }
+    }
+    throw error;
+  }
+
+  private rethrowPendingInvitationConflict(error: unknown): never {
+    if (
+      isPrismaUniqueConstraintViolation(error) &&
+      !getPrismaUniqueConstraintFields(error).includes('id')
+    ) {
+      throw new ConflictException(
+        this.i18n.t('errors.ALREADY_EXISTS', {
+          args: {
+            entity: 'invitation',
+            fieldName: 'recipientId, groupId',
+            fieldValue: InvitationStatus.PENDING,
+          },
+        }),
+      );
     }
     throw error;
   }

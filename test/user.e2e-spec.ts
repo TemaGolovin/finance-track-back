@@ -1,13 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import request = require('supertest');
-import { AppModule } from '../src/app.module';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
-import { JwtAuthGuard } from 'src/auth/guard/jwt.guard';
-import { createConfiguredE2eApp } from './e2e-app';
 import { EmailTokenType, InvitationStatus } from '@prisma/client';
+import { JwtAuthGuard } from 'src/auth/guard/jwt.guard';
 import { MailService } from 'src/mail/mail.service';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { AppModule } from '../src/app.module';
+import { createConfiguredE2eApp } from './e2e-app';
 
 interface InvitationReceived {
   id: string;
@@ -59,6 +59,7 @@ describe('UserController (e2e)', () => {
   let app: INestApplication;
   let prismaService: PrismaService;
   let invitationId: string;
+  let actingUser: { id: string; email: string; name: string } = mockUser;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -68,7 +69,7 @@ describe('UserController (e2e)', () => {
       .useValue({
         canActivate: (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest();
-          req.user = mockUser;
+          req.user = actingUser;
           return true;
         },
       })
@@ -183,6 +184,22 @@ describe('UserController (e2e)', () => {
       });
   });
 
+  it('/user/invitation (POST) - second pending invite for the same pair returns 409', async () => {
+    await request(app.getHttpServer())
+      .post('/user/invitation')
+      .send({ userIds: [userForFind.id], groupId })
+      .expect(409);
+
+    const pendingCount = await prismaService.invitation.count({
+      where: {
+        recipientId: userForFind.id,
+        groupId,
+        status: InvitationStatus.PENDING,
+      },
+    });
+    expect(pendingCount).toBe(1);
+  });
+
   it('/user/invitation (GET) - get all invitations', async () => {
     return request(app.getHttpServer())
       .get('/user/invitation')
@@ -218,6 +235,43 @@ describe('UserController (e2e)', () => {
         expect(body[0].status).toBe(InvitationStatus.PENDING);
         expect(body[0].id).not.toBe(invitationId);
         invitationId = body[0].id;
+      });
+  });
+
+  it('/user/invitation/:id (PATCH) - recipient declines invitation', async () => {
+    actingUser = { id: userForFind.id, email: userForFind.email, name: userForFind.name };
+
+    try {
+      await request(app.getHttpServer())
+        .patch(`/user/invitation/${invitationId}`)
+        .send({ status: InvitationStatus.DECLINED })
+        .expect(200)
+        .then(({ body }) => {
+          expect(body.status).toBe(InvitationStatus.DECLINED);
+        });
+    } finally {
+      actingUser = mockUser;
+    }
+  });
+
+  it('/user/invitation (POST) - invite again after declined - success', async () => {
+    return request(app.getHttpServer())
+      .post('/user/invitation')
+      .send({ userIds: [userForFind.id], groupId })
+      .expect(201)
+      .then(async ({ body }) => {
+        expect(body).toHaveLength(1);
+        expect(body[0].status).toBe(InvitationStatus.PENDING);
+        expect(body[0].id).not.toBe(invitationId);
+
+        const pendingCount = await prismaService.invitation.count({
+          where: {
+            recipientId: userForFind.id,
+            groupId,
+            status: InvitationStatus.PENDING,
+          },
+        });
+        expect(pendingCount).toBe(1);
       });
   });
 
