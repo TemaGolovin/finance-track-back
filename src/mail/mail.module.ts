@@ -30,7 +30,7 @@ import { MailService } from './mail.service';
             from: process.env.MAIL_FROM ?? '"Finance Track" <no-reply@example.com>',
           },
           template: {
-            dir: join(__dirname, '..', '..', 'mail', 'templates'),
+            dir: join(__dirname, 'mail', 'templates'),
             adapter: new HandlebarsAdapter(),
             options: { strict: true },
           },
