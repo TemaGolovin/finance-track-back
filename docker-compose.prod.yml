@@ -91,6 +91,65 @@ services:
       api:
         condition: service_healthy
 
+  goaccess-auth:
+    image: httpd:2.4-alpine
+    container_name: finance-track-goaccess-auth
+    restart: 'no'
+    environment:
+      GOACCESS_USER: ${GOACCESS_USER:-admin}
+      GOACCESS_PASSWORD: ${GOACCESS_PASSWORD:?Set GOACCESS_PASSWORD in .env}
+    volumes:
+      - goaccess_auth:/out
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        set -eu
+        rm -f /out/htpasswd
+        htpasswd -ciB /out/htpasswd "$$GOACCESS_USER" <<ENDPW
+        $$GOACCESS_PASSWORD
+        ENDPW
+        chmod 644 /out/htpasswd
+
+  goaccess:
+    image: allinurl/goaccess:1.12
+    container_name: finance-track-goaccess
+    restart: unless-stopped
+    environment:
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN in .env}
+    volumes:
+      - nginx_logs:/srv/logs:ro
+      - goaccess_html:/html
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        set -eu
+        while [ ! -f /srv/logs/access.log ]; do
+          sleep 2
+        done
+        origin="$${PUBLIC_ORIGIN%/}"
+        scheme="$${origin%%://*}"
+        rest="$${origin#*://}"
+        case "$$scheme" in
+          https) ws_scheme=wss; default_port=443 ;;
+          http) ws_scheme=ws; default_port=80 ;;
+          *) echo "PUBLIC_ORIGIN must start with http:// or https://"; exit 1 ;;
+        esac
+        case "$$rest" in
+          *:*) hostport="$$rest" ;;
+          *) hostport="$${rest}:$${default_port}" ;;
+        esac
+        exec goaccess /srv/logs/access.log \
+          --no-global-config \
+          --log-format=COMBINED \
+          --real-time-html \
+          --addr=0.0.0.0 \
+          --port=7890 \
+          --ws-url="$${ws_scheme}://$${hostport}/goaccess/ws" \
+          -o /html/index.html
+    depends_on:
+      nginx:
+        condition: service_started
+
   nginx:
     image: nginx:1.27-alpine
     container_name: finance-track-nginx
@@ -100,6 +159,10 @@ services:
       - '443:443'
     volumes:
       - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./deploy/nginx/snippets:/etc/nginx/snippets:ro
+      - nginx_logs:/var/log/finance
+      - goaccess_html:/var/www/goaccess:ro
+      - goaccess_auth:/etc/nginx/goaccess:ro
       - certbot_www:/var/www/certbot:ro
       - certbot_etc:/etc/letsencrypt:ro
     depends_on:
@@ -107,6 +170,8 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_started
+      goaccess-auth:
+        condition: service_completed_successfully
 
   certbot:
     image: certbot/certbot:v3.2.0
@@ -122,3 +187,6 @@ volumes:
   postgres_data:
   certbot_etc:
   certbot_www:
+  nginx_logs:
+  goaccess_html:
+  goaccess_auth:

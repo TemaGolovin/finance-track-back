@@ -83,6 +83,18 @@ docker compose -f docker-compose.prod.yml up -d --build web
 
 Опционально: редирект HTTP→HTTPS — добавьте в `10-http.conf` отдельный `location /` с `return 301 https://$host$request_uri;`, оставив `/.well-known/acme-challenge/` как сейчас.
 
+## Аналитика (GoAccess)
+
+Отчёт по access-логу nginx: `{PUBLIC_ORIGIN}/goaccess/`. Порт GoAccess наружу не публикуется. Логин — basic auth из `.env` (`GOACCESS_USER`, по умолчанию `admin`, и `GOACCESS_PASSWORD`).
+
+Nginx пишет лог в volume (`/var/log/finance/access.log` из `05-access-log.conf`), GoAccess собирает из него HTML и обновляет страницу по WebSocket `…/goaccess/ws`. В уже существующий `deploy/nginx/conf.d/20-https.conf` (его нет в git) добавьте внутрь `server`:
+
+```nginx
+include /etc/nginx/snippets/goaccess.conf;
+```
+
+Без этой строки отчёт не откроется по HTTPS. Файл лога на volume растёт, пока его не обрезать (`truncate -s 0` внутри контейнера nginx) — после обрезки перезапустите `goaccess`.
+
 ## 4. Обновление версии
 
 Перед обновлением на проде/стенде сделайте дамп (см. [BACKUP_GUIDE.md](../BACKUP_GUIDE.md)):
