@@ -489,6 +489,99 @@ describe('AuthController (e2e)', () => {
     userInfo.refreshToken = currentRefreshToken;
   });
 
+  it('/auth - unverified user cannot mutate until email is confirmed', async () => {
+    const email = 'unverified-mutations@example.com';
+    const deviceId = '87654321-1234-4234-a234-123456789abd';
+    const password = 'password123';
+    const forwardedFor = '203.0.113.77';
+
+    const stale = await prismaService.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    if (stale) {
+      await prismaService.refreshToken.deleteMany({ where: { userId: stale.id } });
+      await prismaService.category.deleteMany({ where: { userId: stale.id } });
+      await prismaService.user.delete({ where: { id: stale.id } });
+    }
+
+    const registration = await request(app.getHttpServer())
+      .post('/auth/registration')
+      .send({
+        email,
+        name: 'Unverified Mutations',
+        password,
+        deviceId,
+      })
+      .set('user-agent', 'unverified-mutations')
+      .set('X-Forwarded-For', forwardedFor)
+      .expect(200);
+
+    const accessToken = getCookieValue(registration.header['set-cookie'], 'accessToken');
+    expect(accessToken).toBeDefined();
+    const userId = registration.body.id as string;
+
+    const me = await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', [`accessToken=${accessToken}`])
+      .expect(200);
+    expect(me.body.data.emailVerified).toBe(false);
+
+    const blockedProfile = await request(app.getHttpServer())
+      .patch('/auth/profile')
+      .set('Cookie', [`accessToken=${accessToken}`])
+      .set('Accept-Language', 'en')
+      .send({ name: 'Should Not Rename' })
+      .expect(403);
+    expect(blockedProfile.body.message).toBe('Confirm your email before changing data');
+
+    const blockedCategory = await request(app.getHttpServer())
+      .post('/category')
+      .set('Cookie', [`accessToken=${accessToken}`])
+      .set('Accept-Language', 'ru')
+      .send({
+        name: 'Blocked category',
+        categoryType: 'EXPENSE',
+        color: '#FF0000',
+        icon: 'CategoryIcon',
+      })
+      .expect(403);
+    expect(blockedCategory.body.message).toBe('Подтвердите почту, прежде чем изменять данные');
+
+    await request(app.getHttpServer())
+      .post('/auth/logout')
+      .set('Cookie', [`accessToken=${accessToken}`])
+      .expect(200);
+
+    const tokenRecord = await prismaService.emailToken.findFirst({
+      where: { userId, type: EmailTokenType.VERIFY_EMAIL },
+    });
+    expect(tokenRecord).toBeDefined();
+
+    await request(app.getHttpServer())
+      .post('/auth/verify-email')
+      .send({ token: tokenRecord?.token })
+      .expect(201);
+
+    const login = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password, deviceId })
+      .set('user-agent', 'unverified-mutations')
+      .set('X-Forwarded-For', forwardedFor)
+      .expect(200);
+    const verifiedAccess = getCookieValue(login.header['set-cookie'], 'accessToken');
+
+    await request(app.getHttpServer())
+      .patch('/auth/profile')
+      .set('Cookie', [`accessToken=${verifiedAccess}`])
+      .send({ name: 'Verified Mutations' })
+      .expect(200);
+
+    await prismaService.refreshToken.deleteMany({ where: { userId } });
+    await prismaService.category.deleteMany({ where: { userId } });
+    await prismaService.user.delete({ where: { id: userId } });
+  });
+
   it('/auth/login - rate limited after too many attempts (POST)', async () => {
     const limit = getAuthThrottleLimit();
     const failedAttemptsBeforeBlock = Math.max(limit - 1, 0);

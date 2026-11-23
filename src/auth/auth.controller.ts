@@ -13,6 +13,15 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { ApiConflictResponse, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Response } from 'express';
+import { getAuthThrottleLimit, getAuthThrottleTtlMs } from 'src/config/auth-throttle.config';
+import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
+import { AllowUnverifiedEmail } from 'src/decorators/allow-unverified-email.decorator';
+import { Public } from 'src/decorators/public.decorator';
+import { UserInfo } from 'src/decorators/user-auth-info.decorator';
+import { UserRefreshInfo } from 'src/decorators/user-auth-refresh-info.decorator';
 import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
@@ -25,25 +34,11 @@ import {
   UpdateProfileDto,
   VerifyEmailDto,
 } from './dto/auth.dto';
-import { RegistrationEntity } from './entity/registration.entity';
-import { TemplateErrorResponse } from 'src/constants/TemplateErrorResponse';
-import { ApiConflictResponse, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { LoginEntity } from './entity/login.entity';
-import { Response } from 'express';
-import { Public } from 'src/decorators/public.decorator';
-import {
-  getAuthThrottleLimit,
-  getAuthThrottleTtlMs,
-} from 'src/config/auth-throttle.config';
-import { omitAuthTokensFromBody } from './lib/omit-access-token';
+import { RegistrationEntity } from './entity/registration.entity';
 import { JwtAuthRefreshGuard } from './guard/refresh-jwt.guard';
-import { UserRefreshInfo } from 'src/decorators/user-auth-refresh-info.decorator';
-import { UserInfo } from 'src/decorators/user-auth-info.decorator';
-import {
-  clearAuthSessionCookies,
-  setAuthSessionCookies,
-} from './lib/auth-session-cookies';
+import { clearAuthSessionCookies, setAuthSessionCookies } from './lib/auth-session-cookies';
+import { omitAuthTokensFromBody } from './lib/omit-access-token';
 
 const authLoginRegistrationThrottle = {
   auth: {
@@ -119,6 +114,7 @@ export class AuthController {
     return omitAuthTokensFromBody(responseData.data);
   }
 
+  @AllowUnverifiedEmail()
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiCreatedResponse({

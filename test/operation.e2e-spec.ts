@@ -1,16 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import request = require('supertest');
-import { AppModule } from '../src/app.module';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guard/jwt.guard';
-import { createConfiguredE2eApp } from './e2e-app';
 import { CreateOperationDto } from 'src/operation/dto';
 import {
   CreateOperationEntity,
   OperationByDateWithTotalSum,
 } from 'src/operation/entity/operation.entity';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { AppModule } from '../src/app.module';
+import { createConfiguredE2eApp } from './e2e-app';
 
 const testCreateDto: Omit<CreateOperationDto, 'categoryId'> = {
   comment: 'operation name comment',
@@ -62,6 +62,7 @@ describe('OperationController (e2e)', () => {
         email: mockUser.email,
         password: 'password',
         name: mockUser.name,
+        emailVerified: true,
       },
     });
 

@@ -1,12 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { AppModule } from '../src/app.module';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import { JwtAuthGuard } from 'src/auth/guard/jwt.guard';
-import { createConfiguredE2eApp } from './e2e-app';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserGroupDto } from 'src/user-group/dto/create-user-group.dto';
 import { UserGroupRepository } from 'src/user-group/user-group.repository';
+import { AppModule } from '../src/app.module';
+import { createConfiguredE2eApp } from './e2e-app';
 import request = require('supertest');
 
 const mockUser = {
@@ -52,6 +52,7 @@ describe('UserGroupController (e2e)', () => {
         email: mockUser.email,
         password: 'password',
         name: mockUser.name,
+        emailVerified: true,
       },
     });
 

@@ -4,6 +4,7 @@
   "ALREADY_EXISTS": "{entity} с полем \"{fieldName}: {fieldValue}\" уже существует",
   "WRONG_LOGIN_OR_PASSWORD": "Неверный логин или пароль",
   "FORBIDDEN": "У вас нет доступа к этому ресурсу",
+  "EMAIL_NOT_VERIFIED": "Подтвердите почту, прежде чем изменять данные",
   "UNAUTHORIZED": "Не авторизован",
   "INVALID_DATE": "Некорректная дата",
   "INVALID_TOKEN": "Недействительная или истёкшая ссылка",

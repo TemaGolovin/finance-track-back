@@ -51,6 +51,7 @@ const userForFind = {
   email: 'user-for-find-test@example.com',
   password: 'password',
   name: 'new user for find',
+  emailVerified: true,
 };
 
 const groupId = '12341234-1234-4234-a234-123412341234';
@@ -91,6 +92,7 @@ describe('UserController (e2e)', () => {
         email: mockUser.email,
         password: 'password',
         name: mockUser.name,
+        emailVerified: true,
       },
     });
 

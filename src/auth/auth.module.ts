@@ -1,17 +1,18 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
-import { getJWTConfig } from 'src/config/jwt.config';
 import { PassportModule } from '@nestjs/passport';
+import { CategoryModule } from 'src/category/category.module';
+import { getJWTConfig } from 'src/config/jwt.config';
+import { EmailTokenModule } from 'src/email-token/email-token.module';
+import { MailModule } from 'src/mail/mail.module';
+import { AuthController } from './auth.controller';
+import { AuthRepository } from './auth.repository';
+import { AuthService } from './auth.service';
+import { EmailVerifiedGuard } from './guard/email-verified.guard';
+import { JwtAuthGuard } from './guard/jwt.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { RefreshTokenStrategy } from './strategies/refresh-jwt.strategy';
-import { AuthRepository } from './auth.repository';
-import { JwtAuthGuard } from './guard/jwt.guard';
-import { CategoryModule } from 'src/category/category.module';
-import { MailModule } from 'src/mail/mail.module';
-import { EmailTokenModule } from 'src/email-token/email-token.module';
 
 @Module({
   imports: [
@@ -30,7 +31,9 @@ import { EmailTokenModule } from 'src/email-token/email-token.module';
     RefreshTokenStrategy,
     AuthRepository,
     JwtAuthGuard,
+    EmailVerifiedGuard,
     { provide: APP_GUARD, useExisting: JwtAuthGuard },
+    { provide: APP_GUARD, useExisting: EmailVerifiedGuard },
   ],
 })
 export class AuthModule {}

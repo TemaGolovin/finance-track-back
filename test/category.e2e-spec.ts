@@ -1,11 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
 import request = require('supertest');
-import { AppModule } from '../src/app.module';
-import { CreateCategoryDto } from 'src/category/dto';
-import { PrismaService } from 'src/prisma/prisma.service';
 import { ExecutionContext } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guard/jwt.guard';
+import { CreateCategoryDto } from 'src/category/dto';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { AppModule } from '../src/app.module';
 import { createConfiguredE2eApp } from './e2e-app';
 
 const testCreateDto: CreateCategoryDto = {
@@ -57,6 +57,7 @@ describe('CategoryController (e2e)', () => {
         email: mockUser.email,
         password: 'password',
         name: mockUser.name,
+        emailVerified: true,
       },
     });
 
