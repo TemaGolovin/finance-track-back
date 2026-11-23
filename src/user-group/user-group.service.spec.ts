@@ -121,14 +121,14 @@ describe('UserGroupService', () => {
       totalAmount: Prisma.Decimal;
     }[] = [
       {
-        id: '1',
-        name: 'category 1',
-        totalAmount: new Prisma.Decimal(100),
-      },
-      {
         id: '2',
         name: 'category 2',
         totalAmount: new Prisma.Decimal(400),
+      },
+      {
+        id: '1',
+        name: 'category 1',
+        totalAmount: new Prisma.Decimal(100),
       },
       {
         id: '3',
@@ -159,16 +159,16 @@ describe('UserGroupService', () => {
     }).toEqual({
       byCategories: [
         {
-          id: '1',
-          name: 'category 1',
-          totalAmount: '100',
-          proportion: '10',
-        },
-        {
           id: '2',
           name: 'category 2',
           totalAmount: '400',
           proportion: '40',
+        },
+        {
+          id: '1',
+          name: 'category 1',
+          totalAmount: '100',
+          proportion: '10',
         },
         {
           id: '3',

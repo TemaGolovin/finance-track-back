@@ -184,6 +184,7 @@ export class UserGroupRepository {
       WHERE ${Prisma.join(categoryFilters, ' AND ')}
       GROUP BY gc.id, gc.name
       HAVING SUM(o.value) > 0
+      ORDER BY SUM(o.value) DESC
     `;
 
     return rows.map((row) => ({
