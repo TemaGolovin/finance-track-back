@@ -20,6 +20,7 @@ model User {
   email                   String                  @unique()
   password                String
   emailVerified           Boolean                 @default(false)
+  weekStartsOn            Int                     @default(1)
   createAt                DateTime                @default(now())
   updateAt                DateTime                @updatedAt()
   operations              Operation[]

@@ -340,6 +340,46 @@ describe('AuthController (e2e)', () => {
       .expect(400);
   });
 
+  it('/auth/me and /auth/preferences - weekStartsOn (GET, PATCH)', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: userInfo.email,
+        password: userInfo.password,
+        deviceId: registrationDto.deviceId,
+      })
+      .set('user-agent', 'test-agent')
+      .expect(200);
+
+    const accessToken = getCookieValue(login.header['set-cookie'], 'accessToken');
+    expect(accessToken).toBeDefined();
+
+    const me = await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', [`accessToken=${accessToken}`])
+      .expect(200);
+    expect(me.body.data.weekStartsOn).toBe(1);
+
+    const updated = await request(app.getHttpServer())
+      .patch('/auth/preferences')
+      .set('Cookie', [`accessToken=${accessToken}`])
+      .send({ weekStartsOn: 0 })
+      .expect(200);
+    expect(updated.body.data.weekStartsOn).toBe(0);
+
+    const meAfter = await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Cookie', [`accessToken=${accessToken}`])
+      .expect(200);
+    expect(meAfter.body.data.weekStartsOn).toBe(0);
+
+    await request(app.getHttpServer())
+      .patch('/auth/preferences')
+      .set('Cookie', [`accessToken=${accessToken}`])
+      .send({ weekStartsOn: 2 })
+      .expect(400);
+  });
+
   it('/auth/forgot-password - sends password reset email (POST)', async () => {
     return request(app.getHttpServer())
       .post('/auth/forgot-password')

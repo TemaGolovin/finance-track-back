@@ -31,6 +31,7 @@ import {
   RegistrationDto,
   ResendVerificationDto,
   ResetPasswordDto,
+  UpdatePreferencesDto,
   UpdateProfileDto,
   VerifyEmailDto,
 } from './dto/auth.dto';
@@ -133,6 +134,14 @@ export class AuthController {
   @Get('me')
   async me(@UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string }) {
     return this.authService.me(userInfo);
+  }
+
+  @Patch('preferences')
+  async updatePreferences(
+    @Body() dto: UpdatePreferencesDto,
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+  ) {
+    return this.authService.updatePreferences(userInfo.id, dto.weekStartsOn);
   }
 
   @Patch('profile')

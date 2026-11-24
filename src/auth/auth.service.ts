@@ -226,7 +226,7 @@ export class AuthService {
   async me(user: { id: string }) {
     const dbUser = await this.prisma.user.findUnique({
       where: { id: user.id },
-      select: { id: true, email: true, name: true, emailVerified: true },
+      select: { id: true, email: true, name: true, emailVerified: true, weekStartsOn: true },
     });
 
     if (!dbUser) {
@@ -236,6 +236,19 @@ export class AuthService {
     return {
       success: true,
       data: dbUser,
+    };
+  }
+
+  async updatePreferences(userId: string, weekStartsOn: 0 | 1) {
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { weekStartsOn },
+      select: { weekStartsOn: true },
+    });
+
+    return {
+      success: true,
+      data: updated,
     };
   }
 

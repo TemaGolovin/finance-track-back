@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
+import { IsEmail, IsIn, IsOptional, IsString, IsUUID, MinLength } from 'class-validator';
 import { i18nValidationMessage } from 'nestjs-i18n';
 
 export class RegistrationDto {
@@ -94,6 +94,17 @@ export class UpdateProfileDto {
     type: String,
   })
   name: string;
+}
+
+export class UpdatePreferencesDto {
+  @IsIn([0, 1])
+  @ApiProperty({
+    description: 'First day of week (date-fns Day): 0 = Sunday, 1 = Monday',
+    example: 1,
+    required: true,
+    type: Number,
+  })
+  weekStartsOn: 0 | 1;
 }
 
 export class ChangePasswordDto {
