@@ -93,4 +93,4 @@ Local API + DB only: `docker compose up -d` (API on host port **3001**).
 
 ## License
 
-Private project (`UNLICENSED` in `package.json`).
+Copyright (c) 2026 Artem Golovin. All rights reserved. See [LICENSE](./LICENSE).
