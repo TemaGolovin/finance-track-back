@@ -9,7 +9,7 @@ export class MailService {
     const url = `${process.env.APP_URL}/verify-email?token=${token}`;
     await this.mailer.sendMail({
       to: email,
-      subject: 'Подтвердите ваш email — Finance Track',
+      subject: 'Подтвердите ваш email — MoneyHive',
       template: 'verify-email',
       context: { name, url },
     });
@@ -19,7 +19,7 @@ export class MailService {
     const url = `${process.env.APP_URL}/reset-password?token=${token}`;
     await this.mailer.sendMail({
       to: email,
-      subject: 'Сброс пароля — Finance Track',
+      subject: 'Сброс пароля — MoneyHive',
       template: 'reset-password',
       context: { name, url },
     });
@@ -29,7 +29,7 @@ export class MailService {
     const url = `${process.env.APP_URL}/confirm-email-change?token=${token}`;
     await this.mailer.sendMail({
       to: newEmail,
-      subject: 'Подтвердите новый email — Finance Track',
+      subject: 'Подтвердите новый email — MoneyHive',
       template: 'confirm-email-change',
       context: { name, url },
     });

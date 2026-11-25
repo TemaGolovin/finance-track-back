@@ -59,12 +59,12 @@ export function setupSwagger(app: INestApplication): void {
   }
 
   const config = new DocumentBuilder()
-    .setTitle('finance tracker API docs')
+    .setTitle('MoneyHive API docs')
     .setDescription(
-      'A joint finance tracker that allows you to combine the expenses and income of the entire family',
+      'MoneyHive is a joint finance tracker that allows you to combine the expenses and income of the entire family',
     )
     .setVersion('1.0')
-    .addTag('finance-tracker')
+    .addTag('money-hive')
     .addBearerAuth()
     .build();
 

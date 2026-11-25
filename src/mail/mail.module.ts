@@ -27,7 +27,7 @@ import { MailService } from './mail.service';
               : {}),
           },
           defaults: {
-            from: process.env.MAIL_FROM ?? '"Finance Track" <no-reply@example.com>',
+            from: process.env.MAIL_FROM ?? '"MoneyHive" <no-reply@example.com>',
           },
           template: {
             dir: join(__dirname, 'templates'),

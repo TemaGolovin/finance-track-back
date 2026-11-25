@@ -1,4 +1,4 @@
-# Finance Track — backend
+# MoneyHive — backend
 
 REST API for shared family or group income and expense tracking: users, JWT, refresh tokens, groups, categories, transactions, invitations.
 
