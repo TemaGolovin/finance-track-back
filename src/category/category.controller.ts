@@ -85,6 +85,10 @@ export class CategoryController {
 
   @Delete(':id')
   @ApiOkResponse({ type: CreateCategoryResponseEntity })
+  @ApiConflictResponse({
+    description: 'Category has operations or is linked to a group',
+    type: TemplateErrorResponse,
+  })
   @ApiNotFoundResponse({ description: 'Category not found', type: TemplateErrorResponse })
   deleteCategory(
     @Param('id', ParseUUIDPipe) id: string,

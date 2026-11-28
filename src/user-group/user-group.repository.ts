@@ -455,7 +455,16 @@ export class UserGroupRepository {
   async getGroupCategories(groupId: string, userId: string) {
     return this.prisma.groupCategory.findMany({
       where: { groupId },
-      include: { personalCategories: { where: { userId } } },
+      include: {
+        personalCategories: { where: { userId } },
+        _count: { select: { personalCategories: true } },
+      },
+    });
+  }
+
+  async countPersonalMappingsByGroupCategoryId(groupCategoryId: string) {
+    return this.prisma.personalCategoryMap.count({
+      where: { groupCategoryId },
     });
   }
 

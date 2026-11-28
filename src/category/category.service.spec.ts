@@ -1,3 +1,4 @@
+import { ConflictException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { I18nService } from 'nestjs-i18n';
 import { OperationEntity } from 'src/operation/entity/operation.entity';
@@ -11,12 +12,19 @@ const creationDate = new Date();
 
 describe('CategoryService', () => {
   let service: CategoryService;
+  let i18n: { t: jest.Mock };
 
   const categoryRepositoryMock = {
     findManyWithFilterTypeAndDate: jest.fn(),
+    findFirstByIdAndUserId: jest.fn(),
+    countOperationsByCategoryId: jest.fn(),
+    countGroupMappingsByCategoryId: jest.fn(),
+    deleteCategory: jest.fn(),
   };
 
   beforeEach(async () => {
+    i18n = { t: jest.fn((key: string) => key) };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CategoryService,
@@ -26,12 +34,14 @@ describe('CategoryService', () => {
         },
         {
           provide: I18nService,
-          useValue: { t: jest.fn(() => '') },
+          useValue: i18n,
         },
       ],
     }).compile();
 
     service = module.get<CategoryService>(CategoryService);
+    jest.clearAllMocks();
+    i18n.t.mockImplementation((key: string) => key);
   });
 
   it('should be defined CategoryService', () => {
@@ -268,6 +278,56 @@ describe('CategoryService', () => {
         },
       ],
       totalSum: '2000',
+    });
+  });
+
+  describe('deleteCategory', () => {
+    const categoryId = 'cat-1';
+    const userId = 'user-1';
+
+    it('throws NotFound when category does not exist', async () => {
+      categoryRepositoryMock.findFirstByIdAndUserId.mockResolvedValue(null);
+
+      await expect(service.deleteCategory(categoryId, userId)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(categoryRepositoryMock.deleteCategory).not.toHaveBeenCalled();
+    });
+
+    it('throws Conflict when category has operations', async () => {
+      categoryRepositoryMock.findFirstByIdAndUserId.mockResolvedValue({ id: categoryId });
+      categoryRepositoryMock.countOperationsByCategoryId.mockResolvedValue(2);
+
+      await expect(service.deleteCategory(categoryId, userId)).rejects.toMatchObject({
+        response: expect.objectContaining({
+          message: 'errors.CATEGORY_HAS_OPERATIONS',
+          statusCode: HttpStatus.CONFLICT,
+        }),
+      });
+      expect(categoryRepositoryMock.deleteCategory).not.toHaveBeenCalled();
+    });
+
+    it('throws Conflict when category is mapped to a group', async () => {
+      categoryRepositoryMock.findFirstByIdAndUserId.mockResolvedValue({ id: categoryId });
+      categoryRepositoryMock.countOperationsByCategoryId.mockResolvedValue(0);
+      categoryRepositoryMock.countGroupMappingsByCategoryId.mockResolvedValue(1);
+
+      await expect(service.deleteCategory(categoryId, userId)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(i18n.t).toHaveBeenCalledWith('errors.CATEGORY_MAPPED_TO_GROUP');
+      expect(categoryRepositoryMock.deleteCategory).not.toHaveBeenCalled();
+    });
+
+    it('deletes when category has no operations and no group mappings', async () => {
+      const deleted = { id: categoryId, name: 'food' };
+      categoryRepositoryMock.findFirstByIdAndUserId.mockResolvedValue({ id: categoryId });
+      categoryRepositoryMock.countOperationsByCategoryId.mockResolvedValue(0);
+      categoryRepositoryMock.countGroupMappingsByCategoryId.mockResolvedValue(0);
+      categoryRepositoryMock.deleteCategory.mockResolvedValue(deleted);
+
+      await expect(service.deleteCategory(categoryId, userId)).resolves.toEqual(deleted);
+      expect(categoryRepositoryMock.deleteCategory).toHaveBeenCalledWith(categoryId, userId);
     });
   });
 

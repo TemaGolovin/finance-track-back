@@ -10,5 +10,6 @@
   "GROUP_CATEGORY_NOT_IN_GROUP": "Group category does not belong to this group",
   "PERSONAL_CATEGORY_NOT_OWNED": "Personal category does not belong to the user",
   "CATEGORY_TYPE_MISMATCH_CONNECT": "Personal and group category types must match",
-  "GROUP_DELETED": "Group \"{name}\" deleted successfully"
+  "GROUP_DELETED": "Group \"{name}\" deleted successfully",
+  "GROUP_CATEGORY_HAS_MAPPINGS": "Category is linked by {count} members; unlink them first"
 }

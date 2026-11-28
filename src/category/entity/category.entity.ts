@@ -58,4 +58,18 @@ export class CategoryResponseEntity extends CreateCategoryResponseEntity {
     type: String,
   })
   userId: string;
+
+  @ApiProperty({
+    description: 'Whether the category has linked operations',
+    example: false,
+    type: Boolean,
+  })
+  hasOperations: boolean;
+
+  @ApiProperty({
+    description: 'Whether the category is linked to a group category',
+    example: false,
+    type: Boolean,
+  })
+  hasGroupMapping: boolean;
 }

@@ -1,5 +1,10 @@
 /// <reference types="jest" />
-import { ForbiddenException, HttpStatus, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  HttpStatus,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma } from '@prisma/client';
 import { I18nService } from 'nestjs-i18n';
@@ -58,6 +63,9 @@ describe('UserGroupService', () => {
     connectGroupCategoriesToPersonalCategories: jest.fn(),
     getUserGroupStat: jest.fn(),
     updateUserGroup: jest.fn(),
+    findGroupCategoryById: jest.fn(),
+    countPersonalMappingsByGroupCategoryId: jest.fn(),
+    deleteGroupCategory: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -247,5 +255,38 @@ describe('UserGroupService', () => {
         expect(error.message).toBe('Group with id 1 not found');
       }
     }
+  });
+
+  describe('deleteGroupCategory', () => {
+    it('throws Conflict when members have mappings', async () => {
+      userGroupRepositoryMock.getUserGroupById.mockResolvedValue(existedUserGroup);
+      userGroupRepositoryMock.findGroupCategoryById.mockResolvedValue({
+        id: 'gc-1',
+        groupId: '1',
+      });
+      userGroupRepositoryMock.countPersonalMappingsByGroupCategoryId.mockResolvedValue(2);
+
+      await expect(service.deleteGroupCategory('1', 'gc-1', '2')).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(i18nMock.t).toHaveBeenCalledWith('userGroup.GROUP_CATEGORY_HAS_MAPPINGS', {
+        args: { count: 2 },
+      });
+      expect(userGroupRepositoryMock.deleteGroupCategory).not.toHaveBeenCalled();
+    });
+
+    it('deletes when no mappings', async () => {
+      const deleted = { id: 'gc-1', name: 'Food' };
+      userGroupRepositoryMock.getUserGroupById.mockResolvedValue(existedUserGroup);
+      userGroupRepositoryMock.findGroupCategoryById.mockResolvedValue({
+        id: 'gc-1',
+        groupId: '1',
+      });
+      userGroupRepositoryMock.countPersonalMappingsByGroupCategoryId.mockResolvedValue(0);
+      userGroupRepositoryMock.deleteGroupCategory.mockResolvedValue(deleted);
+
+      await expect(service.deleteGroupCategory('1', 'gc-1', '2')).resolves.toEqual(deleted);
+      expect(userGroupRepositoryMock.deleteGroupCategory).toHaveBeenCalledWith('gc-1');
+    });
   });
 });

@@ -12,5 +12,7 @@
   "WRONG_PASSWORD": "Wrong password",
   "OPERATION_TYPE_MISMATCH_CATEGORY": "Operation type must match the category type",
   "FEEDBACK_NOT_CONFIGURED": "Feedback is temporarily unavailable",
-  "FEEDBACK_SEND_FAILED": "Could not send feedback, try again later"
+  "FEEDBACK_SEND_FAILED": "Could not send feedback, try again later",
+  "CATEGORY_HAS_OPERATIONS": "Cannot delete category: it has operations",
+  "CATEGORY_MAPPED_TO_GROUP": "Cannot delete category: it is linked to a group category"
 }

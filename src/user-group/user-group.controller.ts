@@ -10,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import {
+  ApiConflictResponse,
   ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
@@ -286,6 +287,7 @@ export class UserGroupController {
         categoryType: 'EXPENSE',
         defaultKey: 'food',
         connectedPersonalCategoryId: 'd8f4e185-fa72-4ead-97d3-2818ad965e6d',
+        linkedMembersCount: 1,
       },
     ],
   })
@@ -345,6 +347,13 @@ export class UserGroupController {
   @Delete(':groupId/categories/:categoryId')
   @ApiOkResponse({
     example: { id: 'uuid', name: 'Food' },
+  })
+  @ApiConflictResponse({
+    example: {
+      message: 'Category is linked by 2 members; unlink them first',
+      statusCode: 409,
+      error: 'Conflict',
+    },
   })
   @ApiForbiddenResponse({
     example: {

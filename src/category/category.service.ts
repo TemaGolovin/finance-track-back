@@ -20,7 +20,7 @@ export class CategoryService {
   async getCategories(userId: string, type?: 'EXPENSE' | 'INCOME') {
     const categories = await this.categoryRepository.getCategories(userId, type);
 
-    return categories;
+    return categories.map((category) => this.mapCategoryWithDeleteFlags(category));
   }
 
   async createCategory(categoryDto: CreateCategoryDto, userId: string) {
@@ -75,9 +75,17 @@ export class CategoryService {
   async deleteCategory(id: string, userId: string) {
     await this.validateCategoryExists(id, userId);
 
-    const category = await this.categoryRepository.deleteCategory(id, userId);
+    const operationsCount = await this.categoryRepository.countOperationsByCategoryId(id);
+    if (operationsCount > 0) {
+      throw new ConflictException(this.i18n.t('errors.CATEGORY_HAS_OPERATIONS'));
+    }
 
-    return category;
+    const mappingsCount = await this.categoryRepository.countGroupMappingsByCategoryId(id);
+    if (mappingsCount > 0) {
+      throw new ConflictException(this.i18n.t('errors.CATEGORY_MAPPED_TO_GROUP'));
+    }
+
+    return await this.categoryRepository.deleteCategory(id, userId);
   }
 
   async getStatCategories({
@@ -173,7 +181,7 @@ export class CategoryService {
   }
 
   async getCategoryByIdForUser(id: string, userId: string) {
-    const category = await this.categoryRepository.findFirstByIdAndUserId(id, userId);
+    const category = await this.categoryRepository.findFirstByIdAndUserIdWithCounts(id, userId);
 
     if (!category) {
       throw new NotFoundException(
@@ -183,7 +191,18 @@ export class CategoryService {
       );
     }
 
-    return category;
+    return this.mapCategoryWithDeleteFlags(category);
+  }
+
+  private mapCategoryWithDeleteFlags<
+    T extends { _count: { operations: number; groupsMapping: number } },
+  >(category: T) {
+    const { _count, ...rest } = category;
+    return {
+      ...rest,
+      hasOperations: _count.operations > 0,
+      hasGroupMapping: _count.groupsMapping > 0,
+    };
   }
 
   private categoryNameAlreadyExistsConflict(name: string) {

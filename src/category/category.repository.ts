@@ -14,6 +14,14 @@ export class CategoryRepository {
         userId: userId,
         categoryType: type,
       },
+      include: {
+        _count: {
+          select: {
+            operations: true,
+            groupsMapping: true,
+          },
+        },
+      },
     });
   }
 
@@ -26,6 +34,32 @@ export class CategoryRepository {
   async findFirstByIdAndUserId(id: string, userId: string) {
     return await this.prisma.category.findFirst({
       where: { id, userId },
+    });
+  }
+
+  async findFirstByIdAndUserIdWithCounts(id: string, userId: string) {
+    return await this.prisma.category.findFirst({
+      where: { id, userId },
+      include: {
+        _count: {
+          select: {
+            operations: true,
+            groupsMapping: true,
+          },
+        },
+      },
+    });
+  }
+
+  async countOperationsByCategoryId(categoryId: string) {
+    return await this.prisma.operation.count({
+      where: { categoryId },
+    });
+  }
+
+  async countGroupMappingsByCategoryId(categoryId: string) {
+    return await this.prisma.personalCategoryMap.count({
+      where: { categoryId },
     });
   }
 

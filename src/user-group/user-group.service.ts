@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -355,6 +356,7 @@ export class UserGroupService {
       categoryType: cat.categoryType,
       defaultKey: cat.defaultKey,
       connectedPersonalCategoryId: cat.personalCategories[0]?.categoryId ?? null,
+      linkedMembersCount: cat._count.personalCategories,
     }));
   }
 
@@ -414,6 +416,14 @@ export class UserGroupService {
     if (!category || category.groupId !== groupId) {
       throw new NotFoundException(
         this.i18n.t('userGroup.GROUP_CATEGORY_NOT_FOUND', { args: { id: categoryId } }),
+      );
+    }
+
+    const mappingsCount =
+      await this.userGroupRepository.countPersonalMappingsByGroupCategoryId(categoryId);
+    if (mappingsCount > 0) {
+      throw new ConflictException(
+        this.i18n.t('userGroup.GROUP_CATEGORY_HAS_MAPPINGS', { args: { count: mappingsCount } }),
       );
     }
 
