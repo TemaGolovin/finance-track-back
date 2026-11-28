@@ -28,9 +28,9 @@ chmod 600 .env
 | `JWT_SECRET_CODE`, `JWT_REFRESH_SECRET` | длинные случайные строки |
 | `PUBLIC_ORIGIN` | `https://finance.example.com` или на первый запуск `http://IP` |
 | `MAIL_*`, `APP_URL` | для писем (в compose `APP_URL` = `PUBLIC_ORIGIN`) |
-| `FEEDBACK_RECIPIENT` | куда слать форму обратной связи (`POST /feedback`); без неё эндпоинт отвечает 503 |
+| `FEEDBACK_RECIPIENT` | опционально: куда слать письмо по форме обратной связи; записи всегда пишутся в таблицу `Feedback` |
 
-**Почта на стенде:** в `docker-compose.prod.yml` поднимается **Mailpit**. Если в `.env` не заданы `MAIL_HOST` / `MAIL_PORT`, API шлёт письма в `mailpit:1025`. Веб-интерфейс: `{PUBLIC_ORIGIN}/mailpit/` (регистрация, сброс пароля, верификация, обратная связь). Для реальной доставки укажите Resend или другой SMTP в `.env` (см. комментарии в `.env.example`). На публичном проде с внешним SMTP удалите блок `location /mailpit/` из nginx, чтобы не светить перехватчик писем. Для формы обратной связи задайте `FEEDBACK_RECIPIENT` (на стенде с Mailpit можно любой адрес — письмо всё равно попадёт в Mailpit).
+**Почта на стенде:** в `docker-compose.prod.yml` поднимается **Mailpit**. Если в `.env` не заданы `MAIL_HOST` / `MAIL_PORT`, API шлёт письма в `mailpit:1025`. Веб-интерфейс: `{PUBLIC_ORIGIN}/mailpit/` (регистрация, сброс пароля, верификация, обратная связь). Для реальной доставки укажите Resend или другой SMTP в `.env` (см. комментарии в `.env.example`). На публичном проде с внешним SMTP удалите блок `location /mailpit/` из nginx, чтобы не светить перехватчик писем. Обращения из формы всегда сохраняются в БД (`Feedback`). Для email-уведомлений задайте `FEEDBACK_RECIPIENT` (на стенде с Mailpit можно любой адрес — письмо всё равно попадёт в Mailpit).
 
 `DATABASE_URL` в `.env` нужен для локального Prisma; в compose для `api`/`migrate` хост переопределяется на `postgres`.
 

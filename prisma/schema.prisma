@@ -32,6 +32,7 @@ model User {
   groupCreator            UserRelationGroup[]
   categoryGroupMapping    PersonalCategoryMap[]
   emailTokens             EmailToken[]
+  feedbacks               Feedback[]
 }
 
 model UserRelationGroup {
@@ -181,4 +182,23 @@ enum EmailTokenType {
   VERIFY_EMAIL
   RESET_PASSWORD
   CHANGE_EMAIL
+}
+
+model Feedback {
+  id           String       @id @default(uuid())
+  type         FeedbackType
+  message      String
+  replyEmail   String
+  accountEmail String
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum FeedbackType {
+  PROBLEM
+  SUGGESTION
 }

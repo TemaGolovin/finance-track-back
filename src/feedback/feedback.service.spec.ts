@@ -1,7 +1,7 @@
-import { ServiceUnavailableException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { I18nService } from 'nestjs-i18n';
+import { FeedbackType } from '@prisma/client';
 import { MailService } from 'src/mail/mail.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { FeedbackService } from './feedback.service';
 
 describe('FeedbackService', () => {
@@ -9,8 +9,10 @@ describe('FeedbackService', () => {
   const mailService = {
     sendFeedback: jest.fn(),
   };
-  const i18n = {
-    t: jest.fn((key: string) => key),
+  const prisma = {
+    feedback: {
+      create: jest.fn(),
+    },
   };
 
   const user = { id: 'user-1', email: 'account@example.com' };
@@ -23,32 +25,41 @@ describe('FeedbackService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     process.env.FEEDBACK_RECIPIENT = '';
+    prisma.feedback.create.mockResolvedValue({ id: 'fb-1' });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FeedbackService,
         { provide: MailService, useValue: mailService },
-        { provide: I18nService, useValue: i18n },
+        { provide: PrismaService, useValue: prisma },
       ],
     }).compile();
 
     service = module.get(FeedbackService);
   });
 
-  it('throws 503 when FEEDBACK_RECIPIENT is missing', async () => {
-    await expect(service.submitFeedback(dto, user)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
-    expect(i18n.t).toHaveBeenCalledWith('errors.FEEDBACK_NOT_CONFIGURED');
+  it('stores feedback and skips email when FEEDBACK_RECIPIENT is missing', async () => {
+    await expect(service.submitFeedback(dto, user)).resolves.toEqual({ success: true });
+
+    expect(prisma.feedback.create).toHaveBeenCalledWith({
+      data: {
+        type: FeedbackType.PROBLEM,
+        message: dto.message,
+        replyEmail: dto.replyEmail,
+        accountEmail: user.email,
+        userId: user.id,
+      },
+    });
     expect(mailService.sendFeedback).not.toHaveBeenCalled();
   });
 
-  it('sends feedback email when recipient is configured', async () => {
+  it('stores feedback and sends email when recipient is configured', async () => {
     process.env.FEEDBACK_RECIPIENT = ' admin@example.com ';
     mailService.sendFeedback.mockResolvedValue(undefined);
 
     await expect(service.submitFeedback(dto, user)).resolves.toEqual({ success: true });
 
+    expect(prisma.feedback.create).toHaveBeenCalled();
     expect(mailService.sendFeedback).toHaveBeenCalledWith({
       to: 'admin@example.com',
       type: dto.type,
@@ -59,13 +70,11 @@ describe('FeedbackService', () => {
     });
   });
 
-  it('throws 503 when mail sending fails', async () => {
+  it('still succeeds when mail sending fails after DB save', async () => {
     process.env.FEEDBACK_RECIPIENT = 'admin@example.com';
     mailService.sendFeedback.mockRejectedValue(new Error('smtp down'));
 
-    await expect(service.submitFeedback(dto, user)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
-    expect(i18n.t).toHaveBeenCalledWith('errors.FEEDBACK_SEND_FAILED');
+    await expect(service.submitFeedback(dto, user)).resolves.toEqual({ success: true });
+    expect(prisma.feedback.create).toHaveBeenCalled();
   });
 });

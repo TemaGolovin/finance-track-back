@@ -1,7 +1,13 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
-import { I18nService } from 'nestjs-i18n';
+import { Injectable, Logger } from '@nestjs/common';
+import { FeedbackType } from '@prisma/client';
 import { MailService } from 'src/mail/mail.service';
+import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateFeedbackDto } from './dto/create-feedback.dto';
+
+const feedbackTypeToPrisma: Record<CreateFeedbackDto['type'], FeedbackType> = {
+  problem: FeedbackType.PROBLEM,
+  suggestion: FeedbackType.SUGGESTION,
+};
 
 @Injectable()
 export class FeedbackService {
@@ -9,16 +15,27 @@ export class FeedbackService {
 
   constructor(
     private readonly mailService: MailService,
-    private readonly i18n: I18nService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async submitFeedback(
     dto: CreateFeedbackDto,
     user: { id: string; email: string },
   ): Promise<{ success: true }> {
+    await this.prisma.feedback.create({
+      data: {
+        type: feedbackTypeToPrisma[dto.type],
+        message: dto.message,
+        replyEmail: dto.replyEmail,
+        accountEmail: user.email,
+        userId: user.id,
+      },
+    });
+
     const recipient = process.env.FEEDBACK_RECIPIENT?.trim();
     if (!recipient) {
-      throw new ServiceUnavailableException(this.i18n.t('errors.FEEDBACK_NOT_CONFIGURED'));
+      this.logger.warn('FEEDBACK_RECIPIENT is not set; feedback stored without email');
+      return { success: true };
     }
 
     try {
@@ -32,10 +49,9 @@ export class FeedbackService {
       });
     } catch (error: unknown) {
       this.logger.error(
-        'Failed to send feedback email',
+        'Failed to send feedback email; feedback is stored in DB',
         error instanceof Error ? error.stack : String(error),
       );
-      throw new ServiceUnavailableException(this.i18n.t('errors.FEEDBACK_SEND_FAILED'));
     }
 
     return { success: true };
