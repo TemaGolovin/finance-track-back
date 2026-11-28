@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Обратная связь</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 560px; margin: 40px auto; background: #fff; border-radius: 8px; padding: 40px; }
+    h1 { color: #111; font-size: 22px; margin-bottom: 16px; }
+    p { color: #444; line-height: 1.6; }
+    .meta { font-size: 13px; color: #666; margin-bottom: 20px; }
+    .message { white-space: pre-wrap; background: #f8f8f8; border-radius: 6px; padding: 16px; color: #222; }
+    .footer { margin-top: 32px; font-size: 12px; color: #999; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Обратная связь: {{typeLabel}}</h1>
+    <div class="meta">
+      <p>Ответить: {{replyEmail}}</p>
+      <p>Аккаунт: {{accountEmail}}</p>
+      <p>User ID: {{userId}}</p>
+    </div>
+    <div class="message">{{message}}</div>
+    <p class="footer">Письмо отправлено из формы обратной связи MoneyHive.</p>
+  </div>
+</body>
+</html>

@@ -1,5 +1,8 @@
 {
   "NAME_REQUIRED": "Name is required",
   "NAME_MIN_LENGTH": "name must be at least 3 characters long",
-  "PASSWORD_MIN_LENGTH": "password must be at least 6 characters long"
+  "PASSWORD_MIN_LENGTH": "password must be at least 6 characters long",
+  "FEEDBACK_MESSAGE_MIN_LENGTH": "message must be at least 10 characters long",
+  "FEEDBACK_MESSAGE_MAX_LENGTH": "message must be at most 2000 characters long",
+  "EMAIL_INVALID": "email must be a valid email address"
 }

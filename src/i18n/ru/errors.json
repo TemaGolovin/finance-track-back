@@ -10,5 +10,7 @@
   "INVALID_TOKEN": "Недействительная или истёкшая ссылка",
   "TOKEN_EXPIRED": "Срок действия ссылки истёк",
   "WRONG_PASSWORD": "Неверный пароль",
-  "OPERATION_TYPE_MISMATCH_CATEGORY": "Тип операции должен совпадать с типом категории"
+  "OPERATION_TYPE_MISMATCH_CATEGORY": "Тип операции должен совпадать с типом категории",
+  "FEEDBACK_NOT_CONFIGURED": "Обратная связь временно недоступна",
+  "FEEDBACK_SEND_FAILED": "Не удалось отправить обращение, попробуйте позже"
 }

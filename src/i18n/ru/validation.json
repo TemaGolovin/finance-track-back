@@ -1,5 +1,8 @@
 {
   "NAME_REQUIRED": "Укажите имя",
   "NAME_MIN_LENGTH": "название должно быть не короче 3 символов",
-  "PASSWORD_MIN_LENGTH": "пароль должен быть не короче 6 символов"
+  "PASSWORD_MIN_LENGTH": "пароль должен быть не короче 6 символов",
+  "FEEDBACK_MESSAGE_MIN_LENGTH": "сообщение должно быть не короче 10 символов",
+  "FEEDBACK_MESSAGE_MAX_LENGTH": "сообщение должно быть не длиннее 2000 символов",
+  "EMAIL_INVALID": "укажите корректный email"
 }

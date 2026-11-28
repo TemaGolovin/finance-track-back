@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class MailService {
@@ -32,6 +32,30 @@ export class MailService {
       subject: 'Подтвердите новый email — MoneyHive',
       template: 'confirm-email-change',
       context: { name, url },
+    });
+  }
+
+  async sendFeedback(params: {
+    to: string;
+    type: 'problem' | 'suggestion';
+    message: string;
+    replyEmail: string;
+    userId: string;
+    accountEmail: string;
+  }) {
+    const typeLabel = params.type === 'problem' ? 'Проблема' : 'Предложение';
+    await this.mailer.sendMail({
+      to: params.to,
+      replyTo: params.replyEmail,
+      subject: `Обратная связь (${typeLabel}) — MoneyHive`,
+      template: 'feedback',
+      context: {
+        typeLabel,
+        message: params.message,
+        replyEmail: params.replyEmail,
+        userId: params.userId,
+        accountEmail: params.accountEmail,
+      },
     });
   }
 }

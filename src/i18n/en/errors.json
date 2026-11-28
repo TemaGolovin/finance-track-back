@@ -10,5 +10,7 @@
   "INVALID_TOKEN": "Invalid or expired token",
   "TOKEN_EXPIRED": "Token has expired",
   "WRONG_PASSWORD": "Wrong password",
-  "OPERATION_TYPE_MISMATCH_CATEGORY": "Operation type must match the category type"
+  "OPERATION_TYPE_MISMATCH_CATEGORY": "Operation type must match the category type",
+  "FEEDBACK_NOT_CONFIGURED": "Feedback is temporarily unavailable",
+  "FEEDBACK_SEND_FAILED": "Could not send feedback, try again later"
 }
