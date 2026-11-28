@@ -4,6 +4,7 @@
   "FORBIDDEN_UPDATE": "Только создатель группы может изменять группу",
   "FORBIDDEN_REMOVE_MEMBER": "Только создатель группы может удалять участников",
   "CANNOT_REMOVE_CREATOR": "Нельзя удалить создателя группы",
+  "FORBIDDEN_LEAVE_AS_CREATOR": "Создатель не может выйти из группы, только удалить её",
   "FORBIDDEN_MANAGE_CATEGORIES": "Только создатель группы может управлять категориями группы",
   "GROUP_CATEGORY_NOT_FOUND": "Категория группы с id {id} не найдена",
   "DUPLICATE_PERSONAL_CATEGORY_IN_CONNECT": "Каждую личную категорию можно связать только с одной категорией группы в этой группе",
@@ -11,5 +12,6 @@
   "PERSONAL_CATEGORY_NOT_OWNED": "Личная категория не принадлежит пользователю",
   "CATEGORY_TYPE_MISMATCH_CONNECT": "Тип личной и групповой категории должен совпадать",
   "GROUP_DELETED": "Группа «{name}» успешно удалена",
+  "GROUP_LEFT": "Вы вышли из группы",
   "GROUP_CATEGORY_HAS_MAPPINGS": "Категория привязана у {count} участников, сначала отвяжите"
 }

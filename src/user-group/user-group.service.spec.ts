@@ -257,6 +257,40 @@ describe('UserGroupService', () => {
     }
   });
 
+  describe('leave', () => {
+    it('removes member from group - success', async () => {
+      userGroupRepositoryMock.getUserGroupById.mockResolvedValue(existedUserGroup);
+      userGroupRepositoryMock.removeUserFromGroup.mockResolvedValue({ count: 1 });
+
+      await expect(service.leave('1', '1')).resolves.toEqual({
+        message: 'userGroup.GROUP_LEFT',
+      });
+      expect(userGroupRepositoryMock.removeUserFromGroup).toHaveBeenCalledWith('1', '1');
+    });
+
+    it('throws Forbidden when requester is creator', async () => {
+      userGroupRepositoryMock.getUserGroupById.mockResolvedValue(existedUserGroup);
+
+      await expect(service.leave('1', '2')).rejects.toBeInstanceOf(ForbiddenException);
+      expect(i18nMock.t).toHaveBeenCalledWith('userGroup.FORBIDDEN_LEAVE_AS_CREATOR');
+      expect(userGroupRepositoryMock.removeUserFromGroup).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFound when group not found', async () => {
+      userGroupRepositoryMock.getUserGroupById.mockResolvedValue(null);
+
+      await expect(service.leave('1', '1')).rejects.toBeInstanceOf(NotFoundException);
+      expect(userGroupRepositoryMock.removeUserFromGroup).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFound when requester is not a member', async () => {
+      userGroupRepositoryMock.getUserGroupById.mockResolvedValue(existedUserGroup);
+
+      await expect(service.leave('1', '333')).rejects.toBeInstanceOf(NotFoundException);
+      expect(userGroupRepositoryMock.removeUserFromGroup).not.toHaveBeenCalled();
+    });
+  });
+
   describe('deleteGroupCategory', () => {
     it('throws Conflict when members have mappings', async () => {
       userGroupRepositoryMock.getUserGroupById.mockResolvedValue(existedUserGroup);

@@ -239,6 +239,32 @@ export class UserGroupController {
     return this.userGroupService.removeMember(groupId, memberId, userInfo.id);
   }
 
+  @ApiResponse({
+    status: 200,
+    example: { message: 'You left the group' },
+  })
+  @ApiNotFoundResponse({
+    example: {
+      message: 'Group with id UUID not found',
+      statusCode: 404,
+      error: 'Not Found',
+    },
+  })
+  @ApiForbiddenResponse({
+    example: {
+      message: 'The creator cannot leave the group, only delete it',
+      statusCode: 403,
+      error: 'Forbidden',
+    },
+  })
+  @Delete(':groupId/leave')
+  leave(
+    @Param('groupId', ParseUUIDPipe) groupId: string,
+    @UserInfo() userInfo: { email: string; name: string; id: string; deviceId: string },
+  ) {
+    return this.userGroupService.leave(groupId, userInfo.id);
+  }
+
   @Patch(':groupId/category/connect')
   @ApiOkResponse({
     example: [

@@ -4,6 +4,7 @@
   "FORBIDDEN_UPDATE": "Only the group creator can update the group",
   "FORBIDDEN_REMOVE_MEMBER": "Only the group creator can remove members",
   "CANNOT_REMOVE_CREATOR": "Cannot remove the group creator",
+  "FORBIDDEN_LEAVE_AS_CREATOR": "The creator cannot leave the group, only delete it",
   "FORBIDDEN_MANAGE_CATEGORIES": "Only the group creator can manage group categories",
   "GROUP_CATEGORY_NOT_FOUND": "Group category with id {id} not found",
   "DUPLICATE_PERSONAL_CATEGORY_IN_CONNECT": "Each personal category can only be linked to one group category in this group",
@@ -11,5 +12,6 @@
   "PERSONAL_CATEGORY_NOT_OWNED": "Personal category does not belong to the user",
   "CATEGORY_TYPE_MISMATCH_CONNECT": "Personal and group category types must match",
   "GROUP_DELETED": "Group \"{name}\" deleted successfully",
+  "GROUP_LEFT": "You left the group",
   "GROUP_CATEGORY_HAS_MAPPINGS": "Category is linked by {count} members; unlink them first"
 }

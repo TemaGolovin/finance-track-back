@@ -237,6 +237,30 @@ export class UserGroupService {
     return await this.userGroupRepository.removeUserFromGroup(memberId, groupId);
   }
 
+  async leave(groupId: string, userId: string) {
+    const group = await this.userGroupRepository.getUserGroupById(groupId, userId);
+
+    if (!group) {
+      throw new NotFoundException(this.notFound('Group', groupId));
+    }
+
+    const userMemberInGroup = group.users.find((user) => user.user.id === userId);
+
+    if (!userMemberInGroup) {
+      throw new NotFoundException(this.notFound('Group', groupId));
+    }
+
+    if (group.creatorId === userId) {
+      throw new ForbiddenException(this.i18n.t('userGroup.FORBIDDEN_LEAVE_AS_CREATOR'));
+    }
+
+    await this.userGroupRepository.removeUserFromGroup(userId, groupId);
+
+    return {
+      message: this.i18n.t('userGroup.GROUP_LEFT'),
+    };
+  }
+
   async remove(id: string, userId: string) {
     const groupForDelete = await this.userGroupRepository.getUserGroupById(id, userId);
 
